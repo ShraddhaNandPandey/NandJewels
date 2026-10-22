@@ -22,6 +22,8 @@ import { SupportView } from "@/views/SupportView";
 import { AuthView } from "@/views/AuthView";
 import { AdminView } from "@/views/AdminView";
 
+import { cn } from "@/lib/utils";
+
 export default function Home() {
   const view = useStore((s) => s.view);
 
@@ -31,7 +33,7 @@ export default function Home() {
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <Header />
-      <main className="flex-1 pb-20 lg:pb-0">
+      <main className={cn("flex-1", !isAdmin && "pb-20 lg:pb-0")}>
         {view === "home" && <HomeView />}
         {view === "shop" && <ShopView />}
         {view === "product" && <ProductView />}

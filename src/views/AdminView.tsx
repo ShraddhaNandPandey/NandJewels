@@ -137,25 +137,40 @@ export function AdminView() {
   const unreadNotifications = notifications.filter((n) => !n.read).length;
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] bg-accent/20">
+    <div className="min-h-screen bg-accent/20">
       <div className="flex">
-        {/* Sidebar */}
+        {/* Sidebar Backdrop on Mobile & Tablet */}
         {sidebarOpen && (
-          <div className="fixed inset-0 z-40 bg-black/40 lg:hidden" onClick={() => setSidebarOpen(false)} />
+          <div
+            className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-xs lg:hidden transition-opacity"
+            onClick={() => setSidebarOpen(false)}
+          />
         )}
-        <aside className={cn(
-          "fixed lg:sticky top-16 z-40 h-[calc(100vh-4rem)] w-64 shrink-0 border-r border-border bg-card transition-transform lg:translate-x-0",
-          sidebarOpen ? "translate-x-0" : "-translate-x-full"
-        )}>
+        {/* Responsive Sidebar Drawer */}
+        <aside
+          className={cn(
+            "fixed inset-y-0 left-0 z-[70] h-full w-72 max-w-[85vw] border-r border-border bg-card shadow-2xl transition-transform duration-300 ease-in-out lg:static lg:z-auto lg:h-[calc(100vh-4rem)] lg:sticky lg:top-16 lg:w-64 lg:shadow-none lg:translate-x-0",
+            sidebarOpen ? "translate-x-0" : "-translate-x-full"
+          )}
+        >
           <div className="flex h-full flex-col">
-            <div className="flex items-center gap-2 border-b border-border px-5 py-4">
-              <div className="flex h-8 w-8 items-center justify-center rounded-md bg-charcoal text-ivory">
-                <LayoutDashboard className="h-4 w-4" />
+            <div className="flex items-center justify-between border-b border-border px-5 py-4">
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-8 w-8 items-center justify-center rounded-md bg-charcoal text-ivory">
+                  <LayoutDashboard className="h-4 w-4" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold">Admin Panel</p>
+                  <p className="text-xs text-muted-foreground">Shraddhanand Jewellery</p>
+                </div>
               </div>
-              <div>
-                <p className="text-sm font-semibold">Admin Panel</p>
-                <p className="text-xs text-muted-foreground">Shraddhanand Jewellery</p>
-              </div>
+              <button
+                onClick={() => setSidebarOpen(false)}
+                className="lg:hidden p-1.5 rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
+                aria-label="Close sidebar"
+              >
+                ✕
+              </button>
             </div>
             <nav className="flex-1 overflow-y-auto scroll-area-custom p-3">
               {["Overview", "Catalog", "Sales", "Marketing", "Insights", "System"].map((group) => (
@@ -188,27 +203,33 @@ export function AdminView() {
           </div>
         </aside>
 
-        {/* Main */}
-        <main className="flex-1 min-w-0 p-4 sm:p-6">
+        {/* Main Content Area */}
+        <main className="flex-1 min-w-0 p-3 sm:p-5 lg:p-6 overflow-x-hidden">
           {/* Topbar */}
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <Button variant="outline" size="icon" className="lg:hidden" onClick={() => setSidebarOpen(true)}>
+          <div className="flex items-center justify-between gap-2 sm:gap-3">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <Button
+                variant="outline"
+                size="icon"
+                className="lg:hidden shrink-0 h-9 w-9"
+                onClick={() => setSidebarOpen(true)}
+                title="Open menu"
+              >
                 <LayoutDashboard className="h-4 w-4" />
               </Button>
-              <div>
-                <h1 className="font-serif text-2xl capitalize">{section}</h1>
-                <p className="text-xs text-muted-foreground">Admin Workspace · Shraddhanand Store</p>
+              <div className="min-w-0">
+                <h1 className="font-serif text-lg sm:text-2xl font-bold capitalize truncate">{section}</h1>
+                <p className="text-[10px] sm:text-xs text-muted-foreground truncate">Admin Workspace · Shraddhanand Store</p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="hidden sm:flex items-center gap-2 rounded-md border border-border bg-card px-3 py-1.5 shadow-xs">
-                <Search className="h-4 w-4 text-muted-foreground" />
+            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+              <div className="flex items-center gap-1.5 sm:gap-2 rounded-md border border-border bg-card px-2 sm:px-3 py-1.5 shadow-xs">
+                <Search className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground shrink-0" />
                 <input
                   value={globalSearch}
                   onChange={(e) => setGlobalSearch(e.target.value)}
                   placeholder="Quick search…"
-                  className="w-40 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+                  className="w-20 sm:w-36 md:w-44 bg-transparent text-xs sm:text-sm outline-none placeholder:text-muted-foreground"
                 />
                 {globalSearch && (
                   <button onClick={() => setGlobalSearch("")} className="text-xs text-muted-foreground hover:text-foreground">
@@ -220,7 +241,7 @@ export function AdminView() {
                 variant="outline"
                 size="icon"
                 onClick={() => setNotificationsOpen(true)}
-                className="relative"
+                className="relative h-9 w-9 shrink-0"
                 title="Notifications"
               >
                 <Bell className="h-4 w-4" />
@@ -233,11 +254,30 @@ export function AdminView() {
               <button
                 onClick={() => setProfileOpen(true)}
                 title="Admin profile"
-                className="flex h-9 w-9 items-center justify-center rounded-full bg-charcoal text-sm font-medium text-ivory hover:ring-2 hover:ring-champagne transition"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-charcoal text-sm font-medium text-ivory hover:ring-2 hover:ring-champagne transition"
               >
                 AD
               </button>
             </div>
+          </div>
+
+          {/* Mobile & Tablet Horizontal Section Pills */}
+          <div className="lg:hidden -mx-3 sm:-mx-5 px-3 sm:px-5 mt-3 border-b border-border bg-card/60 backdrop-blur-xs py-2 flex items-center gap-1.5 overflow-x-auto scroll-area-custom">
+            {navItems.map((n) => (
+              <button
+                key={n.id}
+                onClick={() => setSection(n.id)}
+                className={cn(
+                  "flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition",
+                  section === n.id
+                    ? "bg-charcoal text-ivory shadow-xs"
+                    : "bg-accent/40 text-muted-foreground hover:bg-accent hover:text-foreground"
+                )}
+              >
+                <n.icon className="h-3.5 w-3.5" />
+                {n.label}
+              </button>
+            ))}
           </div>
 
           <div className="mt-6">
@@ -272,7 +312,7 @@ export function AdminView() {
 
       {/* Notifications Modal */}
       <Dialog open={notificationsOpen} onOpenChange={setNotificationsOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="w-[calc(100vw-1.5rem)] sm:max-w-md max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <div className="flex items-center justify-between">
               <DialogTitle className="font-serif text-lg">Notifications</DialogTitle>
@@ -304,7 +344,7 @@ export function AdminView() {
 
       {/* Admin Profile Modal */}
       <Dialog open={profileOpen} onOpenChange={setProfileOpen}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="w-[calc(100vw-1.5rem)] sm:max-w-sm">
           <DialogHeader>
             <DialogTitle className="font-serif text-lg">Admin Profile</DialogTitle>
           </DialogHeader>
@@ -565,7 +605,62 @@ function DashboardSection({
               View all orders →
             </Button>
           </div>
-          <div className="mt-4 overflow-x-auto">
+          {/* Mobile recent orders cards */}
+          <div className="mt-3 md:hidden space-y-2.5">
+            {(orders.length > 0 ? orders.slice(0, 5) : sampleOrders).map((o, i) => (
+              <div
+                key={i}
+                onClick={() => {
+                  onSelectOrder(o);
+                  onSelectSection("orders");
+                }}
+                className="rounded-lg border border-border/70 bg-card p-3 shadow-2xs hover:border-champagne transition cursor-pointer"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-semibold text-xs text-charcoal">{o.number}</span>
+                  <span className={cn("rounded-full border px-2 py-0.5 text-[10px] capitalize font-medium", statusBadge[o.status])}>
+                    {o.status.replace(/_/g, " ")}
+                  </span>
+                </div>
+                <div className="mt-1.5 flex items-center justify-between text-xs text-muted-foreground">
+                  <span className="truncate text-foreground/90 font-medium">{o.address.name}</span>
+                  <span className="font-semibold text-charcoal">{formatINR(o.total)}</span>
+                </div>
+                <div className="mt-2.5 pt-2 border-t border-border/40 flex items-center justify-between gap-2" onClick={(e) => e.stopPropagation()}>
+                  <span className="text-[10px] text-muted-foreground">
+                    {new Date(o.placedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        onSelectOrder(o);
+                        onSelectSection("orders");
+                      }}
+                      className="h-7 px-2 text-[11px] gap-1 border-charcoal/20 hover:border-champagne"
+                    >
+                      <Printer className="h-3 w-3 text-champagne" /> Print
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => {
+                        onSelectOrder(o);
+                        onSelectSection("orders");
+                      }}
+                      className="h-7 px-2 text-[11px]"
+                    >
+                      View →
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop & Tablet Table */}
+          <div className="mt-4 hidden md:block overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border text-left text-xs text-muted-foreground">
@@ -796,21 +891,26 @@ function ProductsSection() {
 
   return (
     <div className="animate-fade-up">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-2 rounded-md border border-border bg-card px-3 py-2">
-            <Search className="h-4 w-4 text-muted-foreground" />
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto">
+          <div className="flex items-center gap-2 rounded-md border border-border bg-card px-3 py-2 flex-1 sm:flex-initial">
+            <Search className="h-4 w-4 text-muted-foreground shrink-0" />
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search products by name or SKU…"
-              className="w-48 bg-transparent text-sm outline-none"
+              className="w-full sm:w-48 bg-transparent text-sm outline-none"
             />
+            {search && (
+              <button onClick={() => setSearch("")} className="text-xs text-muted-foreground hover:text-foreground">
+                ✕
+              </button>
+            )}
           </div>
           <select
             value={cat}
             onChange={(e) => setCat(e.target.value)}
-            className="h-10 rounded-md border border-border bg-card px-3 text-sm outline-none"
+            className="h-10 rounded-md border border-border bg-card px-3 text-sm outline-none flex-1 sm:flex-initial"
           >
             <option value="all">All categories ({products.length})</option>
             {categories.map((c) => (
@@ -822,13 +922,92 @@ function ProductsSection() {
         </div>
         <Button
           onClick={() => setIsAddOpen(true)}
-          className="bg-charcoal text-ivory hover:bg-charcoal/90 transition shadow-sm"
+          className="w-full sm:w-auto bg-charcoal text-ivory hover:bg-charcoal/90 transition shadow-sm"
         >
           <Plus className="mr-1.5 h-4 w-4" /> Add product
         </Button>
       </div>
 
-      <div className="mt-4 overflow-x-auto rounded-xl border border-border bg-card shadow-xs">
+      {/* Mobile product cards */}
+      <div className="mt-4 md:hidden space-y-3">
+        {filtered.length === 0 ? (
+          <div className="rounded-xl border border-border bg-card p-8 text-center text-muted-foreground text-sm">
+            No products found. Tap &quot;Add product&quot; above to create one.
+          </div>
+        ) : (
+          filtered.map((p) => (
+            <div
+              key={p.id}
+              className="rounded-xl border border-border/80 bg-card p-3.5 shadow-2xs space-y-3 transition hover:border-champagne"
+            >
+              <div className="flex gap-3 items-start">
+                <img
+                  src={p.images[0]}
+                  alt={p.name}
+                  className="h-16 w-16 rounded-lg object-cover border border-border shrink-0"
+                />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between gap-1">
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground capitalize">
+                      {p.category}
+                    </span>
+                    {p.stock <= 0 ? (
+                      <Badge variant="outline" className="border-red-200 bg-red-50 text-red-700 text-[10px] py-0">Out of stock</Badge>
+                    ) : p.stock <= 8 ? (
+                      <Badge variant="outline" className="border-amber-200 bg-amber-50 text-amber-700 text-[10px] py-0">Low stock ({p.stock})</Badge>
+                    ) : (
+                      <Badge variant="outline" className="border-emerald-200 bg-emerald-50 text-emerald-700 text-[10px] py-0">Active ({p.stock})</Badge>
+                    )}
+                  </div>
+                  <p className="font-medium text-sm text-foreground truncate mt-0.5">{p.name}</p>
+                  <p className="text-[11px] text-muted-foreground">{p.sku}</p>
+                  <div className="mt-1 flex items-baseline gap-2">
+                    <span className="font-semibold text-sm text-charcoal">{formatINR(p.price)}</span>
+                    {p.mrp > p.price && (
+                      <span className="text-xs text-muted-foreground line-through">
+                        {formatINR(p.mrp)}
+                      </span>
+                    )}
+                    <span className="ml-auto text-xs text-muted-foreground">{p.rating.toFixed(1)} ★</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action buttons on mobile */}
+              <div className="pt-2 border-t border-border/50 flex items-center justify-between gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setViewProduct(p)}
+                  className="flex-1 h-8 text-xs gap-1"
+                >
+                  <Eye className="h-3.5 w-3.5" /> View
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleOpenEdit(p)}
+                  className="flex-1 h-8 text-xs gap-1"
+                >
+                  <Pencil className="h-3.5 w-3.5" /> Edit
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setDeleteProductTarget(p)}
+                  className="h-8 px-2.5 text-xs text-red-600 hover:bg-red-50"
+                  title="Delete product"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Desktop & Tablet Table */}
+      <div className="mt-4 hidden md:block overflow-x-auto rounded-xl border border-border bg-card shadow-xs">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-accent/30 text-left text-xs text-muted-foreground">
@@ -923,7 +1102,7 @@ function ProductsSection() {
 
       {/* Add Product Dialog */}
       <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-        <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-[calc(100vw-1.5rem)] sm:max-w-xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="font-serif text-xl">Add New Product</DialogTitle>
             <DialogDescription>
@@ -943,7 +1122,7 @@ function ProductsSection() {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="text-xs font-medium text-foreground/80">Category *</label>
                 <select
@@ -970,7 +1149,7 @@ function ProductsSection() {
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
                 <label className="text-xs font-medium text-foreground/80">Selling Price (₹) *</label>
                 <Input
@@ -1089,16 +1268,16 @@ function ProductsSection() {
       {/* View Product Modal */}
       {viewProduct && (
         <Dialog open={!!viewProduct} onOpenChange={(open) => !open && setViewProduct(null)}>
-          <DialogContent className="max-w-md">
+          <DialogContent className="w-[calc(100vw-1.5rem)] sm:max-w-md max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="font-serif text-lg">Product Details</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 py-2">
-              <div className="flex gap-4 items-start">
+              <div className="flex flex-col sm:flex-row gap-3.5 sm:gap-4 items-center sm:items-start text-center sm:text-left">
                 <img
                   src={viewProduct.images[0]}
                   alt={viewProduct.name}
-                  className="h-28 w-28 rounded-lg object-cover border border-border shadow-xs"
+                  className="h-28 w-28 rounded-lg object-cover border border-border shadow-xs shrink-0"
                 />
                 <div className="min-w-0 flex-1">
                   <Badge variant="outline" className="capitalize text-xs font-normal">
@@ -1106,7 +1285,7 @@ function ProductsSection() {
                   </Badge>
                   <h3 className="font-serif text-base font-medium mt-1 leading-snug">{viewProduct.name}</h3>
                   <p className="text-xs text-muted-foreground mt-0.5">SKU: {viewProduct.sku}</p>
-                  <div className="mt-2 flex items-baseline gap-2">
+                  <div className="mt-2 flex items-baseline justify-center sm:justify-start gap-2">
                     <span className="font-semibold text-lg">{formatINR(viewProduct.price)}</span>
                     {viewProduct.mrp > viewProduct.price && (
                       <span className="text-xs text-muted-foreground line-through">
@@ -1119,7 +1298,7 @@ function ProductsSection() {
 
               <Separator />
 
-              <div className="grid grid-cols-2 gap-2 text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                 <div>
                   <span className="text-muted-foreground">Inventory Status:</span>
                   <p className="font-medium mt-0.5">
@@ -1171,7 +1350,7 @@ function ProductsSection() {
       {/* Edit Product Modal */}
       {editProduct && (
         <Dialog open={!!editProduct} onOpenChange={(open) => !open && setEditProduct(null)}>
-          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogContent className="w-[calc(100vw-1.5rem)] sm:max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="font-serif text-xl">Edit Product</DialogTitle>
               <DialogDescription>Update product details and stock status for {editProduct.name}.</DialogDescription>
@@ -1188,7 +1367,7 @@ function ProductsSection() {
                 />
               </div>
 
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <label className="text-xs font-medium text-foreground/80">Selling Price (₹)</label>
                   <Input
@@ -1223,7 +1402,7 @@ function ProductsSection() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs font-medium text-foreground/80">Category</label>
                   <select
@@ -1302,7 +1481,7 @@ function ProductsSection() {
       {/* Delete Confirmation Dialog */}
       {deleteProductTarget && (
         <Dialog open={!!deleteProductTarget} onOpenChange={(open) => !open && setDeleteProductTarget(null)}>
-          <DialogContent className="max-w-md">
+          <DialogContent className="w-[calc(100vw-1.5rem)] sm:max-w-md">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2 text-red-600 font-serif text-lg">
                 <AlertCircle className="h-5 w-5" /> Delete Product
@@ -1434,7 +1613,7 @@ function ShippingLabelModal({
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-3xl max-h-[92vh] overflow-y-auto">
+      <DialogContent className="w-[calc(100vw-1.5rem)] sm:max-w-3xl max-h-[92vh] overflow-y-auto p-3.5 sm:p-6">
         {/* Print stylesheet to isolate the label */}
         <style>{`
           @media print {
@@ -1801,26 +1980,26 @@ function ShippingLabelModal({
         </div>
 
         {/* Modal Actions Footer */}
-        <DialogFooter className="flex flex-wrap items-center justify-between gap-2 sm:justify-between">
+        <DialogFooter className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-2 sm:justify-between w-full pt-2 border-t border-border/50">
           <Button
             type="button"
             variant="outline"
             size="sm"
             onClick={handleCopyTracking}
-            className="text-xs gap-1.5"
+            className="text-xs gap-1.5 h-8"
           >
             {isCopied ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
             {isCopied ? "Copied AWB" : "Copy Tracking AWB"}
           </Button>
 
           <div className="flex items-center gap-2">
-            <Button type="button" variant="outline" size="sm" onClick={onClose} className="text-xs">
+            <Button type="button" variant="outline" size="sm" onClick={onClose} className="text-xs h-8 flex-1 sm:flex-initial">
               Close
             </Button>
             <Button
               type="button"
               onClick={handlePrint}
-              className="bg-charcoal text-ivory hover:bg-charcoal/90 text-xs gap-1.5 shadow-xs"
+              className="bg-charcoal text-ivory hover:bg-charcoal/90 text-xs gap-1.5 shadow-xs h-8 flex-1 sm:flex-initial"
             >
               <Printer className="h-4 w-4 text-champagne" /> Print Shipping Label
             </Button>
@@ -1897,29 +2076,29 @@ function OrdersSection({
   return (
     <div className="animate-fade-up">
       {/* Metric Cards */}
-      <div className="grid gap-3 sm:grid-cols-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
         {[
           { label: "Total orders", value: list.length, cls: "text-foreground" },
           { label: "Today's orders", value: todayOrdersCount, cls: "text-emerald-700 font-bold" },
           { label: "Pending", value: list.filter((o) => ["placed", "confirmed", "processing", "packed"].includes(o.status)).length, cls: "text-amber-600" },
           { label: "Delivered", value: list.filter((o) => o.status === "delivered").length, cls: "text-emerald-600" },
         ].map((s) => (
-          <div key={s.label} className="rounded-xl border border-border bg-card p-4 shadow-xs">
-            <p className={cn("font-serif text-2xl", s.cls)}>{s.value}</p>
-            <p className="text-xs text-muted-foreground">{s.label}</p>
+          <div key={s.label} className="rounded-xl border border-border bg-card p-3 sm:p-4 shadow-xs">
+            <p className={cn("font-serif text-xl sm:text-2xl", s.cls)}>{s.value}</p>
+            <p className="text-[11px] sm:text-xs text-muted-foreground mt-0.5">{s.label}</p>
           </div>
         ))}
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2 rounded-md border border-border bg-card px-3 py-1.5 shadow-xs">
-          <Search className="h-4 w-4 text-muted-foreground" />
+      <div className="mt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-2 rounded-md border border-border bg-card px-3 py-1.5 shadow-xs w-full sm:w-auto">
+          <Search className="h-4 w-4 text-muted-foreground shrink-0" />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search by order #, customer, city…"
-            className="w-56 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+            className="w-full sm:w-56 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
           />
           {search && (
             <button onClick={() => setSearch("")} className="text-xs text-muted-foreground hover:text-foreground">
@@ -1928,13 +2107,13 @@ function OrdersSection({
           )}
         </div>
 
-        <div className="flex gap-1.5 flex-wrap items-center">
+        <div className="flex gap-1.5 flex-wrap items-center overflow-x-auto py-1">
           {(["all", "today", "pending", "shipped", "delivered", "cancelled"] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => setStatusTab(tab)}
               className={cn(
-                "rounded-md px-3 py-1.5 text-xs font-medium capitalize transition flex items-center gap-1.5",
+                "rounded-md px-3 py-1.5 text-xs font-medium capitalize transition flex items-center gap-1.5 shrink-0",
                 statusTab === tab
                   ? "bg-charcoal text-ivory shadow-xs"
                   : "bg-accent/40 text-muted-foreground hover:bg-accent hover:text-foreground"
@@ -1954,7 +2133,7 @@ function OrdersSection({
               variant="outline"
               size="sm"
               onClick={() => setLabelOrder(filteredOrders[0])}
-              className="h-8 gap-1.5 text-xs border-charcoal/20 bg-card hover:border-champagne"
+              className="h-8 gap-1.5 text-xs border-charcoal/20 bg-card hover:border-champagne shrink-0"
               title="Print shipping label for newest order"
             >
               <Printer className="h-3.5 w-3.5 text-champagne" /> Print Latest Label
@@ -1963,8 +2142,76 @@ function OrdersSection({
         </div>
       </div>
 
-      {/* Orders Table */}
-      <div className="mt-4 overflow-x-auto rounded-xl border border-border bg-card shadow-xs">
+      {/* Mobile Orders Cards */}
+      <div className="mt-4 md:hidden space-y-3">
+        {filteredOrders.length === 0 ? (
+          <div className="rounded-xl border border-border bg-card p-8 text-center text-muted-foreground text-sm">
+            No orders match your filter criteria.
+          </div>
+        ) : (
+          filteredOrders.map((o) => (
+            <div
+              key={o.id || o.number}
+              className="rounded-xl border border-border/80 bg-card p-3.5 shadow-2xs space-y-3 transition hover:border-champagne"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="font-semibold text-xs sm:text-sm text-charcoal">{o.number}</span>
+                    {isOrderToday(o.placedAt) && (
+                      <span className="rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 text-[9px] font-bold px-1.5 py-0.5 uppercase tracking-wider">
+                        Today
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">
+                    {new Date(o.placedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                  </p>
+                </div>
+                <span className={cn("rounded-full border px-2 py-0.5 text-[10px] capitalize font-medium shrink-0", statusBadge[o.status])}>
+                  {o.status.replace(/_/g, " ")}
+                </span>
+              </div>
+
+              <div className="rounded-lg bg-accent/30 p-2.5 text-xs space-y-1">
+                <div className="flex justify-between items-baseline">
+                  <span className="font-medium text-foreground">{o.address.name}</span>
+                  <span className="font-semibold text-charcoal text-sm">{formatINR(o.total)}</span>
+                </div>
+                <div className="flex justify-between items-center text-muted-foreground text-[11px]">
+                  <span>{o.address.city}, {o.address.pincode}</span>
+                  <span className="capitalize">{o.paymentMethod} · {o.paymentStatus}</span>
+                </div>
+                <p className="text-[10px] text-muted-foreground">
+                  {o.items.reduce((n, i) => n + i.qty, 0)} item{o.items.reduce((n, i) => n + i.qty, 0) > 1 ? "s" : ""}
+                </p>
+              </div>
+
+              <div className="pt-2 border-t border-border/50 flex items-center justify-between gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setLabelOrder(o)}
+                  className="flex-1 h-8 text-xs gap-1.5 bg-charcoal text-ivory hover:bg-charcoal/90"
+                >
+                  <Printer className="h-3.5 w-3.5 text-champagne" /> Print Label
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleOpenOrder(o)}
+                  className="flex-1 h-8 text-xs gap-1.5"
+                >
+                  <Eye className="h-3.5 w-3.5" /> Details
+                </Button>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Desktop & Tablet Orders Table */}
+      <div className="mt-4 hidden md:block overflow-x-auto rounded-xl border border-border bg-card shadow-xs">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-accent/30 text-left text-xs text-muted-foreground">
@@ -2056,16 +2303,16 @@ function OrdersSection({
       {/* Order Details Modal */}
       {activeModalOrder && (
         <Dialog open={!!activeModalOrder} onOpenChange={(open) => !open && handleCloseOrder()}>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="w-[calc(100vw-1.5rem)] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
                 <div>
-                  <DialogTitle className="font-serif text-xl">Order {activeModalOrder.number}</DialogTitle>
+                  <DialogTitle className="font-serif text-lg sm:text-xl">Order {activeModalOrder.number}</DialogTitle>
                   <DialogDescription className="text-xs mt-0.5">
                     Placed on {new Date(activeModalOrder.placedAt).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}
                   </DialogDescription>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 self-start sm:self-auto">
                   <Button
                     size="sm"
                     variant="outline"
@@ -2158,12 +2405,12 @@ function OrdersSection({
                 <div className="space-y-2 rounded-lg border border-border p-3">
                   {activeModalOrder.items.map((item, idx) => (
                     <div key={idx} className="flex items-center gap-3 py-1 text-sm border-b border-border/40 last:border-0">
-                      <img src={item.image} alt={item.name} className="h-12 w-12 rounded-md object-cover border border-border" />
+                      <img src={item.image} alt={item.name} className="h-12 w-12 rounded-md object-cover border border-border shrink-0" />
                       <div className="min-w-0 flex-1">
                         <p className="font-medium truncate">{item.name}</p>
                         <p className="text-xs text-muted-foreground">Color: {item.colorName} · Qty: {item.qty}</p>
                       </div>
-                      <div className="text-right">
+                      <div className="text-right shrink-0">
                         <p className="font-medium">{formatINR(item.price * item.qty)}</p>
                         <p className="text-xs text-muted-foreground">{formatINR(item.price)} each</p>
                       </div>
@@ -2173,7 +2420,7 @@ function OrdersSection({
               </div>
 
               {/* Customer and Shipping Details */}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="rounded-lg border border-border p-3 text-xs space-y-1">
                   <div className="flex items-center gap-1.5 font-semibold text-charcoal">
                     <MapPin className="h-3.5 w-3.5 text-champagne" /> Shipping Address
@@ -2236,15 +2483,15 @@ function OrdersSection({
               </div>
             </div>
 
-            <DialogFooter className="flex items-center justify-between sm:justify-between w-full">
+            <DialogFooter className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-2 w-full pt-2 border-t border-border/50">
               <Button
                 variant="outline"
                 onClick={() => setLabelOrder(activeModalOrder)}
-                className="gap-1.5 text-xs font-medium"
+                className="gap-1.5 text-xs font-medium h-8"
               >
-                <Printer className="h-4 w-4 text-champagne" /> Print Shipping Label & Packing Slip
+                <Printer className="h-4 w-4 text-champagne" /> Print Shipping Label
               </Button>
-              <Button variant="outline" onClick={handleCloseOrder}>
+              <Button variant="outline" onClick={handleCloseOrder} className="h-8 text-xs">
                 Close
               </Button>
             </DialogFooter>
@@ -2317,7 +2564,7 @@ function CustomersSection({ orders }: { orders: ReturnType<typeof useStore.getSt
   return (
     <div className="animate-fade-up">
       {/* Metric Cards */}
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div className="rounded-xl border border-border bg-card p-4 shadow-xs">
           <p className="font-serif text-2xl">{customers.length}</p>
           <p className="text-xs text-muted-foreground">Total registered customers</p>
@@ -2333,14 +2580,14 @@ function CustomersSection({ orders }: { orders: ReturnType<typeof useStore.getSt
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2 rounded-md border border-border bg-card px-3 py-1.5 shadow-xs">
-          <Search className="h-4 w-4 text-muted-foreground" />
+      <div className="mt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-2 rounded-md border border-border bg-card px-3 py-1.5 shadow-xs w-full sm:w-auto">
+          <Search className="h-4 w-4 text-muted-foreground shrink-0" />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search customers by name, email, city…"
-            className="w-56 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+            className="w-full sm:w-56 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
           />
           {search && (
             <button onClick={() => setSearch("")} className="text-xs text-muted-foreground hover:text-foreground">
@@ -2349,13 +2596,13 @@ function CustomersSection({ orders }: { orders: ReturnType<typeof useStore.getSt
           )}
         </div>
 
-        <div className="flex gap-1.5">
+        <div className="flex gap-1.5 overflow-x-auto py-1">
           {(["all", "gold", "silver", "bronze"] as const).map((t) => (
             <button
               key={t}
               onClick={() => setTierFilter(t)}
               className={cn(
-                "rounded-md px-3 py-1.5 text-xs font-medium capitalize transition",
+                "rounded-md px-3 py-1.5 text-xs font-medium capitalize transition shrink-0",
                 tierFilter === t
                   ? "bg-charcoal text-ivory shadow-xs"
                   : "bg-accent/40 text-muted-foreground hover:bg-accent hover:text-foreground"
@@ -2367,8 +2614,66 @@ function CustomersSection({ orders }: { orders: ReturnType<typeof useStore.getSt
         </div>
       </div>
 
-      {/* Customers Table */}
-      <div className="mt-4 overflow-x-auto rounded-xl border border-border bg-card shadow-xs">
+      {/* Mobile Customers Cards */}
+      <div className="mt-4 md:hidden space-y-3">
+        {filteredCustomers.length === 0 ? (
+          <div className="rounded-xl border border-border bg-card p-8 text-center text-muted-foreground text-sm">
+            No customers found matching your criteria.
+          </div>
+        ) : (
+          filteredCustomers.map((c, i) => (
+            <div
+              key={i}
+              className="rounded-xl border border-border/80 bg-card p-3.5 shadow-2xs space-y-3 transition hover:border-champagne"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex items-center gap-2.5">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-charcoal text-xs font-medium text-ivory shrink-0">
+                    {c.name.split(" ").map((n) => n[0]).join("").slice(0, 2)}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-medium text-sm text-foreground truncate">{c.name}</p>
+                    <p className="text-xs text-muted-foreground truncate">{c.email}</p>
+                  </div>
+                </div>
+                <Badge variant="outline" className={cn(
+                  "shrink-0 text-[10px] py-0",
+                  c.spent > 20000 ? "border-champagne bg-champagne/10 text-charcoal font-medium" : c.spent > 5000 ? "border-blue-200 bg-blue-50 text-blue-700" : "border-zinc-200"
+                )}>
+                  {c.spent > 20000 ? "Gold VIP" : c.spent > 5000 ? "Silver" : "Bronze"}
+                </Badge>
+              </div>
+
+              <div className="grid grid-cols-3 gap-2 rounded-lg bg-accent/30 p-2 text-center text-xs">
+                <div>
+                  <p className="text-[10px] text-muted-foreground">City</p>
+                  <p className="font-medium truncate">{c.city}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] text-muted-foreground">Orders</p>
+                  <p className="font-semibold">{c.orders}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] text-muted-foreground">Spent</p>
+                  <p className="font-semibold text-charcoal">{formatINR(c.spent)}</p>
+                </div>
+              </div>
+
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setSelectedCustomer(c)}
+                className="w-full h-8 text-xs gap-1.5"
+              >
+                <Eye className="h-3.5 w-3.5" /> View Profile & History
+              </Button>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Desktop & Tablet Customers Table */}
+      <div className="mt-4 hidden md:block overflow-x-auto rounded-xl border border-border bg-card shadow-xs">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-accent/30 text-left text-xs text-muted-foreground">
@@ -2431,7 +2736,7 @@ function CustomersSection({ orders }: { orders: ReturnType<typeof useStore.getSt
       {/* Customer Profile Modal */}
       {selectedCustomer && (
         <Dialog open={!!selectedCustomer} onOpenChange={(open) => !open && setSelectedCustomer(null)}>
-          <DialogContent className="max-w-md">
+          <DialogContent className="w-[calc(100vw-1.5rem)] sm:max-w-md max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="font-serif text-lg">Customer Profile</DialogTitle>
             </DialogHeader>
@@ -2620,7 +2925,7 @@ function CouponsSection() {
 
       {/* New Coupon Dialog */}
       <Dialog open={isNewCouponOpen} onOpenChange={setIsNewCouponOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="w-[calc(100vw-1.5rem)] sm:max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="font-serif text-xl">Create New Coupon</DialogTitle>
             <DialogDescription>
@@ -2640,7 +2945,7 @@ function CouponsSection() {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="text-xs font-medium text-foreground/80">Discount Type</label>
                 <select
@@ -2668,7 +2973,7 @@ function CouponsSection() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="text-xs font-medium text-foreground/80">Min Order (₹)</label>
                 <Input
@@ -2713,7 +3018,7 @@ function CouponsSection() {
               />
             </div>
 
-            <DialogFooter className="mt-4 pt-2 border-t border-border">
+            <DialogFooter className="mt-4 pt-2 border-t border-border flex flex-col-reverse sm:flex-row gap-2">
               <Button type="button" variant="outline" onClick={() => setIsNewCouponOpen(false)}>
                 Cancel
               </Button>
@@ -2728,7 +3033,7 @@ function CouponsSection() {
       {/* Delete Confirmation */}
       {deleteTarget && (
         <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
-          <DialogContent className="max-w-md">
+          <DialogContent className="w-[calc(100vw-1.5rem)] sm:max-w-md">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2 text-red-600 font-serif text-lg">
                 <AlertCircle className="h-5 w-5" /> Delete Coupon
@@ -3294,7 +3599,7 @@ function SettingsSection() {
 
       {/* Invite Member Dialog */}
       <Dialog open={isInviteOpen} onOpenChange={setIsInviteOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="w-[calc(100vw-1.5rem)] sm:max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="font-serif text-lg">Invite Team Member</DialogTitle>
             <DialogDescription>Grant administrative permissions to a staff member.</DialogDescription>

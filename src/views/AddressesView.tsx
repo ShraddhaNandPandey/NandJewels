@@ -83,12 +83,12 @@ export function AddressesView() {
     <div className="mx-auto max-w-5xl px-4 sm:px-6 py-6 animate-fade-up">
       <Breadcrumbs items={[{ label: "My Account", view: "account" }, { label: "Addresses" }]} />
 
-      <div className="mt-4 flex items-center justify-between">
+      <div className="mt-4 flex flex-wrap sm:flex-nowrap items-start sm:items-center justify-between gap-3">
         <div>
-          <h1 className="font-serif text-3xl sm:text-4xl">Saved Addresses</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Manage where your orders get delivered</p>
+          <h1 className="font-serif text-2xl sm:text-4xl">Saved Addresses</h1>
+          <p className="mt-1 text-xs sm:text-sm text-muted-foreground">Manage where your orders get delivered</p>
         </div>
-        <Button onClick={openAdd} className="bg-charcoal text-ivory hover:bg-charcoal/90">
+        <Button onClick={openAdd} className="bg-charcoal text-ivory hover:bg-charcoal/90 shrink-0 text-xs sm:text-sm h-9">
           <Plus className="mr-1.5 h-4 w-4" /> Add address
         </Button>
       </div>

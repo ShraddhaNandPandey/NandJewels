@@ -8,6 +8,8 @@ import type {
   Coupon,
   Notification,
   Order,
+  OrderItemComponentSnapshot,
+  OrderItemSnapshot,
   OrderStatus,
   PaymentMethod,
   Product,
@@ -16,7 +18,7 @@ import type {
   User,
   ViewName,
 } from "@/lib/types";
-import { getProduct, products as allProducts } from "@/data/products";
+import { getProduct, products as allProducts, calculateComboStock, setProductStoreGetter } from "@/data/products";
 import { applyCouponDiscount, coupons as defaultCoupons } from "@/data/coupons";
 
 export interface ToastMsg {
@@ -459,23 +461,67 @@ export const useStore = create<StoreState>()(
 
       cart: [],
       addToCart: (productId, qty = 1, colorId, size) => {
-        const product = getProduct(productId);
+        const productList = get().products || allProducts;
+        const product = productList.find((p) => p.id === productId || p.slug === productId) || getProduct(productId);
         if (!product) return;
-        const cid = colorId || product.colors[0]?.id || "default";
+
+        const availableStock = product.productType === "combo"
+          ? calculateComboStock(product.comboComponents, productList)
+          : product.stock;
+
+        if (availableStock <= 0) {
+          get().pushToast({
+            title: "Out of Stock",
+            description: `${product.name} is currently out of stock.`,
+            variant: "destructive",
+          });
+          return;
+        }
+
+        const cid = colorId || product.colors?.[0]?.id || "default";
         const cart = [...get().cart];
         const existing = cart.find(
-          (i) => i.productId === productId && i.colorId === cid && i.size === size && !i.savedForLater
+          (i) => i.productId === product.id && i.colorId === cid && i.size === size && !i.savedForLater
         );
+        const currentQtyInCart = existing ? existing.qty : 0;
+        if (currentQtyInCart + qty > availableStock) {
+          get().pushToast({
+            title: "Stock Limit Reached",
+            description: `Only ${availableStock} units available for ${product.name}.`,
+            variant: "destructive",
+          });
+          if (existing) {
+            existing.qty = availableStock;
+            set({ cart });
+          }
+          return;
+        }
+
         if (existing) {
           existing.qty += qty;
         } else {
-          cart.push({ productId, qty, colorId: cid, size, savedForLater: false });
+          cart.push({ productId: product.id, qty, colorId: cid, size, savedForLater: false });
         }
         set({ cart });
         get().pushToast({ title: "Added to cart", description: product.name, variant: "success" });
       },
       updateQty: (productId, colorId, qty, size) => {
         if (qty < 1) return;
+        const productList = get().products || allProducts;
+        const product = productList.find((p) => p.id === productId || p.slug === productId) || getProduct(productId);
+        if (product) {
+          const availableStock = product.productType === "combo"
+            ? calculateComboStock(product.comboComponents, productList)
+            : product.stock;
+          if (qty > availableStock) {
+            get().pushToast({
+              title: "Stock limit reached",
+              description: `Only ${availableStock} units available.`,
+              variant: "destructive",
+            });
+            qty = Math.max(1, availableStock);
+          }
+        }
         set({
           cart: get().cart.map((i) =>
             i.productId === productId && i.colorId === colorId && !i.savedForLater
@@ -575,9 +621,55 @@ export const useStore = create<StoreState>()(
       orders: initialOrders,
       placeOrder: ({ address, paymentMethod, shipping, tax }) => {
         const cart = get().cart.filter((i) => !i.savedForLater);
-        const items = cart.map((i) => {
-          const p = getProduct(i.productId) as Product;
-          const color = p.colors.find((c) => c.id === i.colorId);
+        const productList = get().products || allProducts;
+        const updatedProducts = [...productList];
+
+        const items: OrderItemSnapshot[] = cart.map((i) => {
+          const p = updatedProducts.find((x) => x.id === i.productId) || (getProduct(i.productId) as Product);
+          const color = p.colors?.find((c) => c.id === i.colorId);
+          const isCombo = p.productType === "combo";
+
+          let comboComponentsSnapshot: OrderItemComponentSnapshot[] | undefined = undefined;
+          if (isCombo && p.comboComponents && p.comboComponents.length > 0) {
+            comboComponentsSnapshot = p.comboComponents.map((cc) => {
+              const compProduct = updatedProducts.find((item) => item.id === cc.componentProductId);
+              return {
+                productId: cc.componentProductId,
+                name: compProduct?.name || "Component Item",
+                sku: compProduct?.sku || "SKU-N/A",
+                image: compProduct?.images?.[0] || p.images[0],
+                qty: cc.quantity * i.qty,
+                price: compProduct?.price || 0,
+              };
+            });
+
+            // Deduct stock from individual component products
+            p.comboComponents.forEach((cc) => {
+              const compIdx = updatedProducts.findIndex((item) => item.id === cc.componentProductId);
+              if (compIdx !== -1) {
+                const target = updatedProducts[compIdx];
+                const deductQty = cc.quantity * i.qty;
+                const newStock = Math.max(0, (target.stock || 0) - deductQty);
+                const updatedColors = target.colors?.map((col) => ({
+                  ...col,
+                  stock: Math.max(0, col.stock - deductQty),
+                })) || target.colors;
+                updatedProducts[compIdx] = { ...target, stock: newStock, colors: updatedColors };
+              }
+            });
+          } else {
+            // Deduct stock from single product
+            const prodIdx = updatedProducts.findIndex((item) => item.id === p.id);
+            if (prodIdx !== -1) {
+              const target = updatedProducts[prodIdx];
+              const newStock = Math.max(0, (target.stock || 0) - i.qty);
+              const updatedColors = target.colors?.map((col) =>
+                col.id === i.colorId ? { ...col, stock: Math.max(0, col.stock - i.qty) } : col
+              ) || target.colors;
+              updatedProducts[prodIdx] = { ...target, stock: newStock, colors: updatedColors };
+            }
+          }
+
           return {
             productId: p.id,
             name: p.name,
@@ -587,8 +679,14 @@ export const useStore = create<StoreState>()(
             colorId: i.colorId,
             colorName: color?.name || "Default",
             size: i.size,
+            isCombo,
+            comboComponents: comboComponentsSnapshot,
           };
         });
+
+        // Save updated inventory back to store
+        set({ products: updatedProducts });
+
         const subtotal = items.reduce((s, i) => s + i.price * i.qty, 0);
         const discount = get().couponDiscount;
         const total = Math.max(0, subtotal - discount + shipping + tax);
@@ -914,6 +1012,11 @@ export const useStore = create<StoreState>()(
     }
   )
 );
+
+// Keep data/products helper dynamically linked to useStore
+if (typeof window !== "undefined") {
+  setProductStoreGetter(() => useStore.getState().products || allProducts);
+}
 
 // Selectors / helpers
 export function useCartCount() {

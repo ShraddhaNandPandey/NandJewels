@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { useStore, formatINR } from "@/store/useStore";
-import { getProduct } from "@/data/products";
+import { getProduct, products as allProducts, calculateComboStock } from "@/data/products";
 import { coupons } from "@/data/coupons";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,8 @@ import {
   Truck,
   ShieldCheck,
   ChevronRight,
+  Layers,
+  Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -35,13 +37,16 @@ export function CartView() {
   const couponDiscount = useStore((s) => s.couponDiscount);
   const applyCoupon = useStore((s) => s.applyCoupon);
   const removeCoupon = useStore((s) => s.removeCoupon);
-  const user = useStore((s) => s.user);
+  const allProductsList = useStore((s) => s.products || allProducts);
 
   const [code, setCode] = useState("");
   const [showCoupons, setShowCoupons] = useState(false);
 
   const items = cartItems
-    .map((i) => ({ item: i, product: getProduct(i.productId) }))
+    .map((i) => ({
+      item: i,
+      product: allProductsList.find((p) => p.id === i.productId) || getProduct(i.productId),
+    }))
     .filter((x) => x.product);
 
   const subtotal = items.reduce((s, x) => s + (x.product!.price * x.item.qty), 0);
@@ -129,20 +134,32 @@ export function CartView() {
           )}
 
           {items.map(({ item, product }) => {
-            const color = product!.colors.find((c) => c.id === item.colorId);
+            const color = product!.colors?.find((c) => c.id === item.colorId);
             const lineTotal = product!.price * item.qty;
-            const outOfStock = product!.stock <= 0;
+            const isCombo = product!.productType === "combo";
+            const effectiveStock = isCombo
+              ? calculateComboStock(product!.comboComponents, allProductsList)
+              : product!.stock;
+            const outOfStock = effectiveStock <= 0;
+
             return (
-              <div key={`${item.productId}-${item.colorId}`} className="flex gap-4 rounded-lg border border-border p-4">
+              <div key={`${item.productId}-${item.colorId}`} className="flex gap-3 sm:gap-4 rounded-lg border border-border p-3 sm:p-4 bg-card">
                 <button onClick={() => navigate("product", { id: product!.id })} className="shrink-0">
-                  <img src={product!.images[0]} alt={product!.name} className="h-24 w-24 rounded-md object-cover sm:h-28 sm:w-28" />
+                  <img src={product!.images[0]} alt={product!.name} className="h-20 w-20 sm:h-28 sm:w-28 rounded-md object-cover border border-border" />
                 </button>
-                <div className="flex flex-1 flex-col">
+                <div className="flex flex-1 min-w-0 flex-col">
                   <div className="flex items-start justify-between gap-2">
                     <div>
-                      <button onClick={() => navigate("product", { id: product!.id })} className="text-left text-sm font-medium hover:text-charcoal sm:text-base">
-                        {product!.name}
-                      </button>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <button onClick={() => navigate("product", { id: product!.id })} className="text-left text-sm font-medium hover:text-charcoal sm:text-base">
+                          {product!.name}
+                        </button>
+                        {isCombo && (
+                          <span className="rounded bg-amber-800 text-amber-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider inline-flex items-center gap-1">
+                            <Layers className="h-2.5 w-2.5" /> Combo
+                          </span>
+                        )}
+                      </div>
                       <p className="mt-0.5 text-xs text-muted-foreground">{product!.collection}</p>
                       <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
                         {color && (
@@ -154,6 +171,28 @@ export function CartView() {
                         {item.size && <span>Size: {item.size}</span>}
                         <span>SKU: {product!.sku}</span>
                       </div>
+
+                      {/* Combo Included Components Breakdown */}
+                      {isCombo && product!.comboComponents && product!.comboComponents.length > 0 && (
+                        <div className="mt-2.5 rounded-md bg-accent/40 p-2.5 text-xs border border-border/60 space-y-1.5">
+                          <p className="font-semibold text-charcoal text-[11px] flex items-center gap-1">
+                            <Sparkles className="h-3 w-3 text-champagne" /> Includes {product!.comboComponents.length} pieces:
+                          </p>
+                          <div className="space-y-1 pl-1">
+                            {product!.comboComponents.map((c, cIdx) => {
+                              const compP = allProductsList.find((p) => p.id === c.componentProductId) || getProduct(c.componentProductId);
+                              return (
+                                <div key={cIdx} className="flex items-center justify-between text-[11px] text-muted-foreground">
+                                  <span className="truncate pr-2">
+                                    • {c.quantity * item.qty} × {compP?.name || "Included Item"}
+                                  </span>
+                                  <span className="font-mono text-[10px] shrink-0 text-foreground/70">{compP?.sku}</span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
                     </div>
                     <button
                       onClick={() => removeFromCart(item.productId, item.colorId, item.size)}
@@ -165,10 +204,10 @@ export function CartView() {
                   </div>
 
                   {outOfStock && (
-                    <p className="mt-1 text-xs text-red-600">Currently out of stock</p>
+                    <p className="mt-1.5 text-xs text-red-600 font-medium">Currently out of stock (insufficient component inventory)</p>
                   )}
 
-                  <div className="mt-auto flex items-end justify-between pt-3">
+                  <div className="mt-auto flex flex-wrap items-center justify-between gap-2 pt-3">
                     <div className="inline-flex items-center rounded-md border border-border">
                       <button
                         onClick={() => updateQty(item.productId, item.colorId, item.qty - 1, item.size)}
@@ -177,7 +216,7 @@ export function CartView() {
                       >
                         <Minus className="h-3.5 w-3.5" />
                       </button>
-                      <span className="w-9 text-center text-sm">{item.qty}</span>
+                      <span className="w-8 sm:w-9 text-center text-sm">{item.qty}</span>
                       <button
                         onClick={() => updateQty(item.productId, item.colorId, item.qty + 1, item.size)}
                         className="flex h-8 w-8 items-center justify-center text-muted-foreground hover:text-foreground"
@@ -186,7 +225,7 @@ export function CartView() {
                         <Plus className="h-3.5 w-3.5" />
                       </button>
                     </div>
-                    <div className="text-right">
+                    <div className="text-right ml-auto">
                       <p className="text-sm font-semibold">{formatINR(lineTotal)}</p>
                       {product!.mrp > product!.price && (
                         <p className="text-xs text-muted-foreground line-through">{formatINR(product!.mrp * item.qty)}</p>

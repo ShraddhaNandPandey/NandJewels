@@ -2,9 +2,10 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { useStore, formatINR, type StoreSettings, type AdminRoleUser } from "@/store/useStore";
-import { products as allProducts } from "@/data/products";
+import { products as allProducts, calculateComboStock } from "@/data/products";
 import { categories } from "@/data/categories";
 import { coupons as defaultCoupons } from "@/data/coupons";
+import type { CategorySlug, Product, ProductBadge, ComboComponent, Order, OrderStatus, Coupon, Review } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -57,6 +58,14 @@ import {
   PackageCheck,
   ShieldCheck,
   Copy,
+  Layers,
+  Sparkles,
+  Gem,
+  Minus,
+  RefreshCw,
+  SlidersHorizontal,
+  ArrowRight,
+  ShieldAlert,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -73,7 +82,6 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
-import type { CategorySlug, Coupon, Order, OrderStatus, Product, Review } from "@/lib/types";
 
 type AdminSection = "dashboard" | "products" | "orders" | "customers" | "coupons" | "reviews" | "reports" | "settings";
 
@@ -762,14 +770,23 @@ function ProductsSection() {
 
   const [search, setSearch] = useState("");
   const [cat, setCat] = useState("all");
+  const [typeFilter, setTypeFilter] = useState<"all" | "single" | "combo">("all");
 
   // Modal dialog states
   const [isAddOpen, setIsAddOpen] = useState(false);
+  const [productTypeTab, setProductTypeTab] = useState<"single" | "combo">("single");
   const [viewProduct, setViewProduct] = useState<Product | null>(null);
   const [editProduct, setEditProduct] = useState<Product | null>(null);
+  const [editComboProduct, setEditComboProduct] = useState<Product | null>(null);
   const [deleteProductTarget, setDeleteProductTarget] = useState<Product | null>(null);
 
-  // Add Product Form State
+  // Searchable Product Selector Modal for Combo
+  const [isSelectorOpen, setIsSelectorOpen] = useState(false);
+  const [selectorTarget, setSelectorTarget] = useState<"add" | "edit">("add");
+  const [selectorSearch, setSelectorSearch] = useState("");
+  const [selectorCat, setSelectorCat] = useState("all");
+
+  // Single Product Form State (preserved intact)
   const initialNewProduct = {
     name: "",
     category: "earrings" as CategorySlug,
@@ -786,7 +803,7 @@ function ProductsSection() {
   };
   const [newForm, setNewForm] = useState(initialNewProduct);
 
-  // Edit Product Form State
+  // Edit Single Product Form State
   const [editForm, setEditForm] = useState({
     name: "",
     category: "earrings" as CategorySlug,
@@ -800,20 +817,238 @@ function ProductsSection() {
     newArrival: false,
   });
 
-  const handleOpenEdit = (p: Product) => {
-    setEditProduct(p);
-    setEditForm({
-      name: p.name,
-      category: p.category,
-      price: p.price,
-      mrp: p.mrp,
-      stock: p.stock,
-      material: p.material || "18k Gold Plated Brass",
-      description: p.description || "",
-      image: p.images[0] || presetJewelleryImages[0].url,
-      bestseller: !!p.bestseller,
-      newArrival: !!p.newArrival,
+  // Combo SKU Generator
+  const generateComboSku = () => `SHR-CMB-${Math.floor(100 + Math.random() * 900)}`;
+
+  // Combo Form State
+  const initialComboForm = {
+    name: "",
+    sku: generateComboSku(),
+    category: "sets" as CategorySlug,
+    collection: "celeste",
+    price: 0,
+    mrp: 0,
+    material: "18k Gold Plated Brass, Baroque Pearl & Cubic Zirconia",
+    description: "Curated festive jewellery combo set with complementary handcrafted pieces.",
+    image: presetJewelleryImages[5].url,
+    additionalImages: "",
+    components: [] as { productId: string; quantity: number }[],
+    newArrival: true,
+    bestseller: false,
+    featured: true,
+    status: "active" as "active" | "draft",
+  };
+  const [comboForm, setComboForm] = useState(initialComboForm);
+  const [comboFormError, setComboFormError] = useState<string | null>(null);
+
+  // Edit Combo Form State
+  const [editComboForm, setEditComboForm] = useState(initialComboForm);
+  const [editComboError, setEditComboError] = useState<string | null>(null);
+
+  // Calculations for Add Combo Form
+  const comboComponentDetails = useMemo(() => {
+    return comboForm.components.map((c) => {
+      const p = products.find((item) => item.id === c.productId);
+      return {
+        ...c,
+        product: p,
+      };
     });
+  }, [comboForm.components, products]);
+
+  const individualTotal = useMemo(() => {
+    return comboComponentDetails.reduce((sum, item) => sum + (item.product?.price || 0) * item.quantity, 0);
+  }, [comboComponentDetails]);
+
+  const combinedMrp = useMemo(() => {
+    return comboComponentDetails.reduce(
+      (sum, item) => sum + (item.product?.mrp || item.product?.price || 0) * item.quantity,
+      0
+    );
+  }, [comboComponentDetails]);
+
+  const availableComboStock = useMemo(() => {
+    if (comboForm.components.length === 0) return 0;
+    return calculateComboStock(
+      comboForm.components.map((c) => ({ componentProductId: c.productId, quantity: c.quantity })),
+      products
+    );
+  }, [comboForm.components, products]);
+
+  const comboSavings = Math.max(0, individualTotal - Number(comboForm.price || 0));
+  const comboDiscountPct =
+    individualTotal > 0 && Number(comboForm.price) < individualTotal
+      ? Math.round(((individualTotal - Number(comboForm.price)) / individualTotal) * 100)
+      : 0;
+
+  // Calculations for Edit Combo Form
+  const editComboComponentDetails = useMemo(() => {
+    return editComboForm.components.map((c) => {
+      const p = products.find((item) => item.id === c.productId);
+      return {
+        ...c,
+        product: p,
+      };
+    });
+  }, [editComboForm.components, products]);
+
+  const editIndividualTotal = useMemo(() => {
+    return editComboComponentDetails.reduce((sum, item) => sum + (item.product?.price || 0) * item.quantity, 0);
+  }, [editComboComponentDetails]);
+
+  const editCombinedMrp = useMemo(() => {
+    return editComboComponentDetails.reduce(
+      (sum, item) => sum + (item.product?.mrp || item.product?.price || 0) * item.quantity,
+      0
+    );
+  }, [editComboComponentDetails]);
+
+  const editAvailableComboStock = useMemo(() => {
+    if (editComboForm.components.length === 0) return 0;
+    return calculateComboStock(
+      editComboForm.components.map((c) => ({ componentProductId: c.productId, quantity: c.quantity })),
+      products
+    );
+  }, [editComboForm.components, products]);
+
+  const editComboSavings = Math.max(0, editIndividualTotal - Number(editComboForm.price || 0));
+  const editComboDiscountPct =
+    editIndividualTotal > 0 && Number(editComboForm.price) < editIndividualTotal
+      ? Math.round(((editIndividualTotal - Number(editComboForm.price)) / editIndividualTotal) * 100)
+      : 0;
+
+  // Candidate products for selector modal
+  const candidateProducts = useMemo(() => {
+    const currentComboId = selectorTarget === "edit" ? editComboProduct?.id : null;
+    return products.filter((p) => {
+      if (currentComboId && p.id === currentComboId) return false;
+      if (selectorCat !== "all" && p.category !== selectorCat) return false;
+      if (selectorSearch.trim()) {
+        const q = selectorSearch.toLowerCase().trim();
+        const matchesName = p.name.toLowerCase().includes(q);
+        const matchesSku = p.sku.toLowerCase().includes(q);
+        return matchesName || matchesSku;
+      }
+      return true;
+    });
+  }, [products, selectorTarget, editComboProduct, selectorCat, selectorSearch]);
+
+  const handleAddComponentToCombo = (target: "add" | "edit", productToAdd: Product) => {
+    const isTargetAdd = target === "add";
+    const setter = isTargetAdd ? setComboForm : setEditComboForm;
+
+    setter((prev) => {
+      const existingIdx = prev.components.findIndex((c) => c.productId === productToAdd.id);
+      let updatedComponents;
+      if (existingIdx !== -1) {
+        updatedComponents = prev.components.map((c, i) =>
+          i === existingIdx ? { ...c, quantity: c.quantity + 1 } : c
+        );
+      } else {
+        updatedComponents = [...prev.components, { productId: productToAdd.id, quantity: 1 }];
+      }
+
+      const newTotal = updatedComponents.reduce((sum, c) => {
+        const item = products.find((p) => p.id === c.productId);
+        return sum + (item?.price || 0) * c.quantity;
+      }, 0);
+
+      const newMrp = updatedComponents.reduce((sum, c) => {
+        const item = products.find((p) => p.id === c.productId);
+        return sum + (item?.mrp || item?.price || 0) * c.quantity;
+      }, 0);
+
+      const newPrice = isTargetAdd && (prev.price === 0 || prev.price === prev.mrp)
+        ? Math.round(newTotal * 0.8)
+        : prev.price;
+
+      return {
+        ...prev,
+        components: updatedComponents,
+        price: newPrice,
+        mrp: newMrp,
+      };
+    });
+  };
+
+  const handleUpdateComponentQty = (target: "add" | "edit", productId: string, delta: number) => {
+    const setter = target === "add" ? setComboForm : setEditComboForm;
+    setter((prev) => {
+      const updated = prev.components
+        .map((c) => {
+          if (c.productId === productId) {
+            const nextQty = c.quantity + delta;
+            return nextQty > 0 ? { ...c, quantity: nextQty } : null;
+          }
+          return c;
+        })
+        .filter(Boolean) as { productId: string; quantity: number }[];
+
+      const newMrp = updated.reduce((sum, c) => {
+        const item = products.find((p) => p.id === c.productId);
+        return sum + (item?.mrp || item?.price || 0) * c.quantity;
+      }, 0);
+
+      return {
+        ...prev,
+        components: updated,
+        mrp: newMrp,
+      };
+    });
+  };
+
+  const handleRemoveComponent = (target: "add" | "edit", productId: string) => {
+    const setter = target === "add" ? setComboForm : setEditComboForm;
+    setter((prev) => {
+      const updated = prev.components.filter((c) => c.productId !== productId);
+      const newMrp = updated.reduce((sum, c) => {
+        const item = products.find((p) => p.id === c.productId);
+        return sum + (item?.mrp || item?.price || 0) * c.quantity;
+      }, 0);
+      return {
+        ...prev,
+        components: updated,
+        mrp: newMrp,
+      };
+    });
+  };
+
+  const handleOpenEdit = (p: Product) => {
+    if (p.productType === "combo") {
+      setEditComboProduct(p);
+      setEditComboForm({
+        name: p.name,
+        sku: p.sku,
+        category: p.category,
+        collection: p.collection || "celeste",
+        price: p.price,
+        mrp: p.mrp,
+        material: p.material || "18k Gold Plated Brass",
+        description: p.description || "",
+        image: p.images[0] || presetJewelleryImages[5].url,
+        additionalImages: p.images.slice(1).join(", "),
+        components: p.comboComponents?.map((c) => ({ productId: c.componentProductId, quantity: c.quantity })) || [],
+        newArrival: !!p.newArrival,
+        bestseller: !!p.bestseller,
+        featured: !!p.featured,
+        status: p.status || "active",
+      });
+      setEditComboError(null);
+    } else {
+      setEditProduct(p);
+      setEditForm({
+        name: p.name,
+        category: p.category,
+        price: p.price,
+        mrp: p.mrp,
+        stock: p.stock,
+        material: p.material || "18k Gold Plated Brass",
+        description: p.description || "",
+        image: p.images[0] || presetJewelleryImages[0].url,
+        bestseller: !!p.bestseller,
+        newArrival: !!p.newArrival,
+      });
+    }
   };
 
   const handleCreateProduct = (e: React.FormEvent) => {
@@ -851,10 +1086,89 @@ function ProductsSection() {
       bestseller: newForm.bestseller,
       newArrival: newForm.newArrival,
       featured: true,
+      productType: "single",
+      status: "active",
     };
 
     addProduct(created);
     setNewForm(initialNewProduct);
+    setIsAddOpen(false);
+  };
+
+  const handleCreateCombo = (e: React.FormEvent) => {
+    e.preventDefault();
+    setComboFormError(null);
+
+    if (!comboForm.name.trim()) {
+      setComboFormError("Please enter a Combo / Bundle Name.");
+      return;
+    }
+    if (!comboForm.sku.trim()) {
+      setComboFormError("Please provide a Bundle SKU.");
+      return;
+    }
+    if (comboForm.components.length === 0) {
+      setComboFormError("Please add at least one product to this combo.");
+      return;
+    }
+    if (Number(comboForm.price) <= 0) {
+      setComboFormError("Combo Selling Price must be greater than 0.");
+      return;
+    }
+
+    const slug = comboForm.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+    const images = [comboForm.image || presetJewelleryImages[5].url];
+    if (comboForm.additionalImages) {
+      comboForm.additionalImages
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean)
+        .forEach((u) => {
+          if (!images.includes(u)) images.push(u);
+        });
+    }
+
+    const created: Product = {
+      id: `cmb-${Date.now()}`,
+      sku: comboForm.sku.trim(),
+      name: comboForm.name.trim(),
+      slug: slug || `combo-${Math.floor(100 + Math.random() * 900)}`,
+      productType: "combo",
+      category: comboForm.category,
+      subcategory: "combo-deals",
+      collection: comboForm.collection,
+      price: Number(comboForm.price),
+      mrp: Number(comboForm.mrp) || individualTotal || Number(comboForm.price),
+      images,
+      colors: [{ id: "combo-default", name: "Standard Set", color: "#c9a96a", stock: availableComboStock }],
+      sizes: ["Free Size"],
+      material: comboForm.material,
+      weight: "Coordinated Set",
+      dimensions: "Multiple pieces",
+      care: "Avoid contact with water and perfume. Store each component in the included soft pouch.",
+      description: comboForm.description,
+      rating: 5.0,
+      reviewCount: 0,
+      reviews: [],
+      tags: [comboForm.category, "combo", "bundle", comboForm.collection],
+      badges: [
+        "combo",
+        ...(comboForm.newArrival ? ["new" as ProductBadge] : []),
+        ...(comboForm.bestseller ? ["bestseller" as ProductBadge] : []),
+      ],
+      stock: availableComboStock,
+      bestseller: comboForm.bestseller,
+      newArrival: comboForm.newArrival,
+      featured: comboForm.featured,
+      status: comboForm.status,
+      comboComponents: comboForm.components.map((c) => ({ componentProductId: c.productId, quantity: c.quantity })),
+    };
+
+    addProduct(created);
+    setComboForm({
+      ...initialComboForm,
+      sku: generateComboSku(),
+    });
     setIsAddOpen(false);
   };
 
@@ -878,19 +1192,86 @@ function ProductsSection() {
     setEditProduct(null);
   };
 
+  const handleSaveEditCombo = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editComboProduct) return;
+    setEditComboError(null);
+
+    if (!editComboForm.name.trim()) {
+      setEditComboError("Please enter a Combo Name.");
+      return;
+    }
+    if (!editComboForm.sku.trim()) {
+      setEditComboError("Please enter a Bundle SKU.");
+      return;
+    }
+    if (editComboForm.components.length === 0) {
+      setEditComboError("Please include at least one product in this combo.");
+      return;
+    }
+    if (Number(editComboForm.price) <= 0) {
+      setEditComboError("Combo Selling Price must be greater than 0.");
+      return;
+    }
+
+    const images = [editComboForm.image || presetJewelleryImages[5].url];
+    if (editComboForm.additionalImages) {
+      editComboForm.additionalImages
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean)
+        .forEach((u) => {
+          if (!images.includes(u)) images.push(u);
+        });
+    }
+
+    updateProduct(editComboProduct.id, {
+      name: editComboForm.name.trim(),
+      sku: editComboForm.sku.trim(),
+      category: editComboForm.category,
+      collection: editComboForm.collection,
+      price: Number(editComboForm.price),
+      mrp: Number(editComboForm.mrp) || editIndividualTotal || Number(editComboForm.price),
+      material: editComboForm.material,
+      description: editComboForm.description,
+      images,
+      bestseller: editComboForm.bestseller,
+      newArrival: editComboForm.newArrival,
+      featured: editComboForm.featured,
+      status: editComboForm.status,
+      productType: "combo",
+      comboComponents: editComboForm.components.map((c) => ({
+        componentProductId: c.productId,
+        quantity: c.quantity,
+      })),
+      stock: editAvailableComboStock,
+    });
+
+    setEditComboProduct(null);
+  };
+
   const handleDeleteConfirm = () => {
     if (!deleteProductTarget) return;
     deleteProduct(deleteProductTarget.id);
     setDeleteProductTarget(null);
   };
 
-  const filtered = products.filter((p) =>
-    (cat === "all" || p.category === cat) &&
-    (p.name.toLowerCase().includes(search.toLowerCase()) || p.sku.toLowerCase().includes(search.toLowerCase()))
-  );
+  const filtered = products.filter((p) => {
+    const matchesCat = cat === "all" || p.category === cat;
+    const matchesType =
+      typeFilter === "all" ||
+      (typeFilter === "combo" ? p.productType === "combo" : p.productType !== "combo");
+    const q = search.toLowerCase();
+    const matchesSearch =
+      p.name.toLowerCase().includes(q) ||
+      p.sku.toLowerCase().includes(q) ||
+      p.category.toLowerCase().includes(q);
+    return matchesCat && matchesType && matchesSearch;
+  });
 
   return (
     <div className="animate-fade-up">
+      {/* Search, Category, and Type Filter Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto">
           <div className="flex items-center gap-2 rounded-md border border-border bg-card px-3 py-2 flex-1 sm:flex-initial">
@@ -908,6 +1289,15 @@ function ProductsSection() {
             )}
           </div>
           <select
+            value={typeFilter}
+            onChange={(e) => setTypeFilter(e.target.value as "all" | "single" | "combo")}
+            className="h-10 rounded-md border border-border bg-card px-3 text-sm outline-none flex-1 sm:flex-initial"
+          >
+            <option value="all">All Types ({products.length})</option>
+            <option value="single">Single Products ({products.filter((p) => p.productType !== "combo").length})</option>
+            <option value="combo">Combos & Bundles ({products.filter((p) => p.productType === "combo").length})</option>
+          </select>
+          <select
             value={cat}
             onChange={(e) => setCat(e.target.value)}
             className="h-10 rounded-md border border-border bg-card px-3 text-sm outline-none flex-1 sm:flex-initial"
@@ -921,7 +1311,11 @@ function ProductsSection() {
           </select>
         </div>
         <Button
-          onClick={() => setIsAddOpen(true)}
+          onClick={() => {
+            setProductTypeTab("single");
+            setComboFormError(null);
+            setIsAddOpen(true);
+          }}
           className="w-full sm:w-auto bg-charcoal text-ivory hover:bg-charcoal/90 transition shadow-sm"
         >
           <Plus className="mr-1.5 h-4 w-4" /> Add product
@@ -932,77 +1326,96 @@ function ProductsSection() {
       <div className="mt-4 md:hidden space-y-3">
         {filtered.length === 0 ? (
           <div className="rounded-xl border border-border bg-card p-8 text-center text-muted-foreground text-sm">
-            No products found. Tap &quot;Add product&quot; above to create one.
+            No products found matching your filter criteria.
           </div>
         ) : (
-          filtered.map((p) => (
-            <div
-              key={p.id}
-              className="rounded-xl border border-border/80 bg-card p-3.5 shadow-2xs space-y-3 transition hover:border-champagne"
-            >
-              <div className="flex gap-3 items-start">
-                <img
-                  src={p.images[0]}
-                  alt={p.name}
-                  className="h-16 w-16 rounded-lg object-cover border border-border shrink-0"
-                />
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center justify-between gap-1">
-                    <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground capitalize">
-                      {p.category}
-                    </span>
-                    {p.stock <= 0 ? (
-                      <Badge variant="outline" className="border-red-200 bg-red-50 text-red-700 text-[10px] py-0">Out of stock</Badge>
-                    ) : p.stock <= 8 ? (
-                      <Badge variant="outline" className="border-amber-200 bg-amber-50 text-amber-700 text-[10px] py-0">Low stock ({p.stock})</Badge>
-                    ) : (
-                      <Badge variant="outline" className="border-emerald-200 bg-emerald-50 text-emerald-700 text-[10px] py-0">Active ({p.stock})</Badge>
-                    )}
-                  </div>
-                  <p className="font-medium text-sm text-foreground truncate mt-0.5">{p.name}</p>
-                  <p className="text-[11px] text-muted-foreground">{p.sku}</p>
-                  <div className="mt-1 flex items-baseline gap-2">
-                    <span className="font-semibold text-sm text-charcoal">{formatINR(p.price)}</span>
-                    {p.mrp > p.price && (
-                      <span className="text-xs text-muted-foreground line-through">
-                        {formatINR(p.mrp)}
+          filtered.map((p) => {
+            const isCombo = p.productType === "combo";
+            const effectiveStock = isCombo ? calculateComboStock(p.comboComponents, products) : p.stock;
+
+            return (
+              <div
+                key={p.id}
+                className="rounded-xl border border-border/80 bg-card p-3.5 shadow-2xs space-y-3 transition hover:border-champagne"
+              >
+                <div className="flex gap-3 items-start">
+                  <div className="relative shrink-0">
+                    <img
+                      src={p.images[0]}
+                      alt={p.name}
+                      className="h-16 w-16 rounded-lg object-cover border border-border shrink-0"
+                    />
+                    {isCombo && (
+                      <span className="absolute -bottom-1 -right-1 rounded bg-amber-800 text-amber-50 text-[9px] font-bold px-1 py-0.2 shadow-sm uppercase">
+                        Combo
                       </span>
                     )}
-                    <span className="ml-auto text-xs text-muted-foreground">{p.rating.toFixed(1)} ★</span>
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-1 flex-wrap">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground capitalize">
+                          {p.category}
+                        </span>
+                        {isCombo && (
+                          <Badge className="bg-amber-800 text-amber-50 border-amber-600/40 text-[9px] px-1 py-0 font-bold uppercase">
+                            Combo
+                          </Badge>
+                        )}
+                      </div>
+                      {effectiveStock <= 0 ? (
+                        <Badge variant="outline" className="border-red-200 bg-red-50 text-red-700 text-[10px] py-0">Out of stock</Badge>
+                      ) : effectiveStock <= 8 ? (
+                        <Badge variant="outline" className="border-amber-200 bg-amber-50 text-amber-700 text-[10px] py-0">Low stock ({effectiveStock})</Badge>
+                      ) : (
+                        <Badge variant="outline" className="border-emerald-200 bg-emerald-50 text-emerald-700 text-[10px] py-0">Active ({effectiveStock})</Badge>
+                      )}
+                    </div>
+                    <p className="font-medium text-sm text-foreground truncate mt-0.5">{p.name}</p>
+                    <p className="text-[11px] text-muted-foreground">{p.sku}</p>
+                    <div className="mt-1 flex items-baseline gap-2">
+                      <span className="font-semibold text-sm text-charcoal">{formatINR(p.price)}</span>
+                      {p.mrp > p.price && (
+                        <span className="text-xs text-muted-foreground line-through">
+                          {formatINR(p.mrp)}
+                        </span>
+                      )}
+                      <span className="ml-auto text-xs text-muted-foreground">{p.rating.toFixed(1)} ★</span>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Action buttons on mobile */}
-              <div className="pt-2 border-t border-border/50 flex items-center justify-between gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setViewProduct(p)}
-                  className="flex-1 h-8 text-xs gap-1"
-                >
-                  <Eye className="h-3.5 w-3.5" /> View
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => handleOpenEdit(p)}
-                  className="flex-1 h-8 text-xs gap-1"
-                >
-                  <Pencil className="h-3.5 w-3.5" /> Edit
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => setDeleteProductTarget(p)}
-                  className="h-8 px-2.5 text-xs text-red-600 hover:bg-red-50"
-                  title="Delete product"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </Button>
+                {/* Action buttons on mobile */}
+                <div className="pt-2 border-t border-border/50 flex items-center justify-between gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setViewProduct(p)}
+                    className="flex-1 h-8 text-xs gap-1"
+                  >
+                    <Eye className="h-3.5 w-3.5" /> View
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleOpenEdit(p)}
+                    className="flex-1 h-8 text-xs gap-1"
+                  >
+                    <Pencil className="h-3.5 w-3.5" /> Edit
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setDeleteProductTarget(p)}
+                    className="h-8 px-2.5 text-xs text-red-600 hover:bg-red-50"
+                    title="Delete product"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
               </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
 
@@ -1012,6 +1425,7 @@ function ProductsSection() {
           <thead>
             <tr className="border-b border-border bg-accent/30 text-left text-xs text-muted-foreground">
               <th className="px-4 py-3 font-medium">Product</th>
+              <th className="px-4 py-3 font-medium">Type</th>
               <th className="px-4 py-3 font-medium">Category</th>
               <th className="px-4 py-3 font-medium">Price</th>
               <th className="px-4 py-3 font-medium">Stock</th>
@@ -1023,254 +1437,834 @@ function ProductsSection() {
           <tbody>
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">
+                <td colSpan={8} className="px-4 py-8 text-center text-muted-foreground">
                   No products found. Click &quot;Add product&quot; above to create one.
                 </td>
               </tr>
             ) : (
-              filtered.map((p) => (
-                <tr key={p.id} className="border-b border-border/50 last:border-0 hover:bg-accent/20 transition-colors">
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-3">
-                      <img src={p.images[0]} alt={p.name} className="h-10 w-10 rounded-md object-cover border border-border/60" />
-                      <div className="min-w-0 max-w-[200px] sm:max-w-xs">
-                        <p className="truncate font-medium">{p.name}</p>
-                        <p className="text-xs text-muted-foreground">{p.sku}</p>
+              filtered.map((p) => {
+                const isCombo = p.productType === "combo";
+                const effectiveStock = isCombo ? calculateComboStock(p.comboComponents, products) : p.stock;
+
+                return (
+                  <tr key={p.id} className="border-b border-border/50 last:border-0 hover:bg-accent/20 transition-colors">
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-3">
+                        <div className="relative shrink-0">
+                          <img src={p.images[0]} alt={p.name} className="h-10 w-10 rounded-md object-cover border border-border/60" />
+                          {isCombo && (
+                            <span className="absolute -bottom-1 -right-1 rounded bg-amber-800 text-amber-50 text-[8px] font-bold px-1 py-0 uppercase">
+                              Cmb
+                            </span>
+                          )}
+                        </div>
+                        <div className="min-w-0 max-w-[200px] sm:max-w-xs">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <p className="truncate font-medium">{p.name}</p>
+                            {isCombo && (
+                              <Badge className="bg-amber-800 text-amber-50 hover:bg-amber-800/90 border-amber-600/40 text-[9px] px-1.5 py-0 font-bold tracking-wider inline-flex items-center gap-0.5">
+                                <Layers className="h-2.5 w-2.5" /> COMBO
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-xs text-muted-foreground">{p.sku}</p>
+                        </div>
                       </div>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 capitalize text-muted-foreground">{p.category}</td>
-                  <td className="px-4 py-3">
-                    <span className="font-medium">{formatINR(p.price)}</span>
-                    {p.mrp > p.price && (
-                      <span className="ml-1 text-xs text-muted-foreground line-through">
-                        {formatINR(p.mrp)}
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3">
-                    <span
-                      className={cn(
-                        "font-medium",
-                        p.stock <= 0 ? "text-red-600" : p.stock <= 8 ? "text-amber-600" : "text-emerald-600"
+                    </td>
+                    <td className="px-4 py-3">
+                      {isCombo ? (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 border border-amber-200/80 px-2 py-0.5 text-xs font-semibold text-amber-800">
+                          <Layers className="h-3 w-3" /> Combo
+                        </span>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">Single</span>
                       )}
-                    >
-                      {p.stock}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">{p.rating.toFixed(1)} ★</td>
-                  <td className="px-4 py-3">
-                    {p.stock <= 0 ? (
-                      <Badge variant="outline" className="border-red-200 bg-red-50 text-red-700">Out of stock</Badge>
-                    ) : p.stock <= 8 ? (
-                      <Badge variant="outline" className="border-amber-200 bg-amber-50 text-amber-700">Low stock</Badge>
-                    ) : (
-                      <Badge variant="outline" className="border-emerald-200 bg-emerald-50 text-emerald-700">Active</Badge>
-                    )}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex justify-end gap-1.5">
-                      <button
-                        title="View product details"
-                        onClick={() => setViewProduct(p)}
-                        className="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition"
+                    </td>
+                    <td className="px-4 py-3 capitalize text-muted-foreground">{p.category}</td>
+                    <td className="px-4 py-3">
+                      <span className="font-medium">{formatINR(p.price)}</span>
+                      {p.mrp > p.price && (
+                        <span className="ml-1 text-xs text-muted-foreground line-through">
+                          {formatINR(p.mrp)}
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span
+                        className={cn(
+                          "font-medium",
+                          effectiveStock <= 0 ? "text-red-600" : effectiveStock <= 8 ? "text-amber-600" : "text-emerald-600"
+                        )}
                       >
-                        <Eye className="h-4 w-4" />
-                      </button>
-                      <button
-                        title="Edit product"
-                        onClick={() => handleOpenEdit(p)}
-                        className="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition"
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </button>
-                      <button
-                        title="Delete product"
-                        onClick={() => setDeleteProductTarget(p)}
-                        className="rounded-md p-1.5 text-muted-foreground hover:bg-red-50 hover:text-red-600 transition"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))
+                        {effectiveStock}
+                      </span>
+                      {isCombo && (
+                        <span className="block text-[10px] text-muted-foreground whitespace-nowrap">
+                          from components
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">{p.rating.toFixed(1)} ★</td>
+                    <td className="px-4 py-3">
+                      {effectiveStock <= 0 ? (
+                        <Badge variant="outline" className="border-red-200 bg-red-50 text-red-700">Out of stock</Badge>
+                      ) : effectiveStock <= 8 ? (
+                        <Badge variant="outline" className="border-amber-200 bg-amber-50 text-amber-700">Low stock</Badge>
+                      ) : (
+                        <Badge variant="outline" className="border-emerald-200 bg-emerald-50 text-emerald-700">Active</Badge>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex justify-end gap-1.5">
+                        <button
+                          title="View product details"
+                          onClick={() => setViewProduct(p)}
+                          className="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </button>
+                        <button
+                          title="Edit product"
+                          onClick={() => handleOpenEdit(p)}
+                          className="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </button>
+                        <button
+                          title="Delete product"
+                          onClick={() => setDeleteProductTarget(p)}
+                          className="rounded-md p-1.5 text-muted-foreground hover:bg-red-50 hover:text-red-600 transition"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>
       </div>
 
-      {/* Add Product Dialog */}
+      {/* Add Product / Combo Dialog */}
       <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-        <DialogContent className="w-[calc(100vw-1.5rem)] sm:max-w-xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-[calc(100vw-1.5rem)] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="font-serif text-xl">Add New Product</DialogTitle>
+            <DialogTitle className="font-serif text-xl">
+              {productTypeTab === "combo" ? "Add New Combo / Bundle" : "Add New Product"}
+            </DialogTitle>
             <DialogDescription>
-              Create a new handcrafted piece for the Shraddhanand jewellery collection.
+              {productTypeTab === "combo"
+                ? "Bundle multiple jewellery pieces together at a special combo price."
+                : "Create a new handcrafted piece for the Shraddhanand jewellery collection."}
             </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handleCreateProduct} className="space-y-4 py-2">
-            <div>
-              <label className="text-xs font-medium text-foreground/80">Product Name *</label>
-              <Input
-                required
-                placeholder="e.g. Royal Kundan Choker Necklace"
-                value={newForm.name}
-                onChange={(e) => setNewForm({ ...newForm, name: e.target.value })}
-                className="mt-1"
-              />
+          {/* Requirement 1: Product Type selection segmented buttons */}
+          <div className="space-y-1.5 pt-1 pb-2 border-b border-border">
+            <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Product Type *
+            </label>
+            <div className="grid grid-cols-2 gap-2 p-1 rounded-xl bg-accent/40 border border-border">
+              <button
+                type="button"
+                onClick={() => setProductTypeTab("single")}
+                className={cn(
+                  "flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-medium transition-all",
+                  productTypeTab === "single"
+                    ? "bg-card text-foreground shadow-xs border border-border font-semibold text-charcoal"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <Gem className="h-3.5 w-3.5 text-champagne" />
+                <span>Single Product</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setProductTypeTab("combo");
+                  if (!comboForm.sku) setComboForm((prev) => ({ ...prev, sku: generateComboSku() }));
+                }}
+                className={cn(
+                  "flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-medium transition-all",
+                  productTypeTab === "combo"
+                    ? "bg-card text-foreground shadow-xs border border-champagne/50 font-semibold text-charcoal"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <Layers className="h-3.5 w-3.5 text-amber-700" />
+                <span>Combo / Bundle</span>
+              </button>
             </div>
+          </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {/* SINGLE PRODUCT FORM - Preserved exactly */}
+          {productTypeTab === "single" && (
+            <form onSubmit={handleCreateProduct} className="space-y-4 py-2">
               <div>
-                <label className="text-xs font-medium text-foreground/80">Category *</label>
-                <select
-                  value={newForm.category}
-                  onChange={(e) => setNewForm({ ...newForm, category: e.target.value as CategorySlug })}
-                  className="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none"
-                >
-                  {categories.map((c) => (
-                    <option key={c.id} value={c.slug}>{c.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="text-xs font-medium text-foreground/80">Collection</label>
-                <select
-                  value={newForm.collection}
-                  onChange={(e) => setNewForm({ ...newForm, collection: e.target.value })}
-                  className="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none"
-                >
-                  <option value="celeste">Celeste (Everyday Elegance)</option>
-                  <option value="noir">Noir (Bridal & Statement)</option>
-                  <option value="lumiere">Lumière (Modern Crystal)</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div>
-                <label className="text-xs font-medium text-foreground/80">Selling Price (₹) *</label>
+                <label className="text-xs font-medium text-foreground/80">Product Name *</label>
                 <Input
                   required
-                  type="number"
-                  min="1"
-                  value={newForm.price}
-                  onChange={(e) => setNewForm({ ...newForm, price: Number(e.target.value) })}
+                  placeholder="e.g. Royal Kundan Choker Necklace"
+                  value={newForm.name}
+                  onChange={(e) => setNewForm({ ...newForm, name: e.target.value })}
                   className="mt-1"
                 />
               </div>
-              <div>
-                <label className="text-xs font-medium text-foreground/80">MRP (₹)</label>
-                <Input
-                  type="number"
-                  min="1"
-                  value={newForm.mrp}
-                  onChange={(e) => setNewForm({ ...newForm, mrp: Number(e.target.value) })}
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <label className="text-xs font-medium text-foreground/80">Stock Quantity *</label>
-                <Input
-                  required
-                  type="number"
-                  min="0"
-                  value={newForm.stock}
-                  onChange={(e) => setNewForm({ ...newForm, stock: Number(e.target.value) })}
-                  className="mt-1"
-                />
-              </div>
-            </div>
 
-            <div>
-              <label className="text-xs font-medium text-foreground/80">Material & Finish</label>
-              <Input
-                placeholder="e.g. 18k Gold Plated Brass, Semi-precious Stones"
-                value={newForm.material}
-                onChange={(e) => setNewForm({ ...newForm, material: e.target.value })}
-                className="mt-1"
-              />
-            </div>
-
-            <div>
-              <label className="text-xs font-medium text-foreground/80">Image URL</label>
-              <Input
-                placeholder="https://..."
-                value={newForm.image}
-                onChange={(e) => setNewForm({ ...newForm, image: e.target.value })}
-                className="mt-1"
-              />
-              <p className="mt-1.5 text-[11px] text-muted-foreground">Or choose from curated preset imagery:</p>
-              <div className="mt-1.5 flex flex-wrap gap-2">
-                {presetJewelleryImages.map((img) => (
-                  <button
-                    key={img.label}
-                    type="button"
-                    onClick={() => setNewForm({ ...newForm, image: img.url })}
-                    className={cn(
-                      "flex items-center gap-1.5 rounded-md border p-1 text-xs transition",
-                      newForm.image === img.url ? "border-champagne bg-champagne/10 font-medium" : "border-border hover:bg-accent"
-                    )}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-medium text-foreground/80">Category *</label>
+                  <select
+                    value={newForm.category}
+                    onChange={(e) => setNewForm({ ...newForm, category: e.target.value as CategorySlug })}
+                    className="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none"
                   >
-                    <img src={img.url} alt={img.label} className="h-6 w-6 rounded object-cover" />
-                    <span>{img.label}</span>
-                  </button>
-                ))}
+                    {categories.map((c) => (
+                      <option key={c.id} value={c.slug}>{c.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-foreground/80">Collection</label>
+                  <select
+                    value={newForm.collection}
+                    onChange={(e) => setNewForm({ ...newForm, collection: e.target.value })}
+                    className="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none"
+                  >
+                    <option value="celeste">Celeste (Everyday Elegance)</option>
+                    <option value="noir">Noir (Bridal & Statement)</option>
+                    <option value="lumiere">Lumière (Modern Crystal)</option>
+                  </select>
+                </div>
               </div>
-            </div>
 
-            <div>
-              <label className="text-xs font-medium text-foreground/80">Description</label>
-              <Textarea
-                rows={2}
-                placeholder="Provide details about craftsmanship, design inspiration..."
-                value={newForm.description}
-                onChange={(e) => setNewForm({ ...newForm, description: e.target.value })}
-                className="mt-1"
-              />
-            </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="text-xs font-medium text-foreground/80">Selling Price (₹) *</label>
+                  <Input
+                    required
+                    type="number"
+                    min="1"
+                    value={newForm.price}
+                    onChange={(e) => setNewForm({ ...newForm, price: Number(e.target.value) })}
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-foreground/80">MRP (₹)</label>
+                  <Input
+                    type="number"
+                    min="1"
+                    value={newForm.mrp}
+                    onChange={(e) => setNewForm({ ...newForm, mrp: Number(e.target.value) })}
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-foreground/80">Stock Quantity *</label>
+                  <Input
+                    required
+                    type="number"
+                    min="0"
+                    value={newForm.stock}
+                    onChange={(e) => setNewForm({ ...newForm, stock: Number(e.target.value) })}
+                    className="mt-1"
+                  />
+                </div>
+              </div>
 
-            <div className="flex items-center gap-6 pt-1 text-sm">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={newForm.newArrival}
-                  onChange={(e) => setNewForm({ ...newForm, newArrival: e.target.checked })}
-                  className="h-4 w-4 rounded accent-charcoal"
+              <div>
+                <label className="text-xs font-medium text-foreground/80">Material & Finish</label>
+                <Input
+                  placeholder="e.g. 18k Gold Plated Brass, Semi-precious Stones"
+                  value={newForm.material}
+                  onChange={(e) => setNewForm({ ...newForm, material: e.target.value })}
+                  className="mt-1"
                 />
-                <span>Tag as New Arrival</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={newForm.bestseller}
-                  onChange={(e) => setNewForm({ ...newForm, bestseller: e.target.checked })}
-                  className="h-4 w-4 rounded accent-charcoal"
-                />
-                <span>Tag as Bestseller</span>
-              </label>
-            </div>
+              </div>
 
-            <DialogFooter className="mt-4 pt-2 border-t border-border">
-              <Button type="button" variant="outline" onClick={() => setIsAddOpen(false)}>
-                Cancel
-              </Button>
-              <Button type="submit" className="bg-charcoal text-ivory hover:bg-charcoal/90">
-                <Plus className="mr-1.5 h-4 w-4" /> Create Product
-              </Button>
-            </DialogFooter>
-          </form>
+              <div>
+                <label className="text-xs font-medium text-foreground/80">Image URL</label>
+                <Input
+                  placeholder="https://..."
+                  value={newForm.image}
+                  onChange={(e) => setNewForm({ ...newForm, image: e.target.value })}
+                  className="mt-1"
+                />
+                <p className="mt-1.5 text-[11px] text-muted-foreground">Or choose from curated preset imagery:</p>
+                <div className="mt-1.5 flex flex-wrap gap-2">
+                  {presetJewelleryImages.map((img) => (
+                    <button
+                      key={img.label}
+                      type="button"
+                      onClick={() => setNewForm({ ...newForm, image: img.url })}
+                      className={cn(
+                        "flex items-center gap-1.5 rounded-md border p-1 text-xs transition",
+                        newForm.image === img.url ? "border-champagne bg-champagne/10 font-medium" : "border-border hover:bg-accent"
+                      )}
+                    >
+                      <img src={img.url} alt={img.label} className="h-6 w-6 rounded object-cover" />
+                      <span>{img.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-medium text-foreground/80">Description</label>
+                <Textarea
+                  rows={2}
+                  placeholder="Provide details about craftsmanship, design inspiration..."
+                  value={newForm.description}
+                  onChange={(e) => setNewForm({ ...newForm, description: e.target.value })}
+                  className="mt-1"
+                />
+              </div>
+
+              <div className="flex items-center gap-6 pt-1 text-sm">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={newForm.newArrival}
+                    onChange={(e) => setNewForm({ ...newForm, newArrival: e.target.checked })}
+                    className="h-4 w-4 rounded accent-charcoal"
+                  />
+                  <span>Tag as New Arrival</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={newForm.bestseller}
+                    onChange={(e) => setNewForm({ ...newForm, bestseller: e.target.checked })}
+                    className="h-4 w-4 rounded accent-charcoal"
+                  />
+                  <span>Tag as Bestseller</span>
+                </label>
+              </div>
+
+              <DialogFooter className="mt-4 pt-2 border-t border-border">
+                <Button type="button" variant="outline" onClick={() => setIsAddOpen(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" className="bg-charcoal text-ivory hover:bg-charcoal/90">
+                  <Plus className="mr-1.5 h-4 w-4" /> Create Product
+                </Button>
+              </DialogFooter>
+            </form>
+          )}
+
+          {/* COMBO / BUNDLE FORM */}
+          {productTypeTab === "combo" && (
+            <form onSubmit={handleCreateCombo} className="space-y-4 py-2">
+              {comboFormError && (
+                <div className="rounded-lg bg-red-50 border border-red-200 p-3 text-xs text-red-700 flex items-center gap-2">
+                  <AlertCircle className="h-4 w-4 shrink-0 text-red-600" />
+                  <span>{comboFormError}</span>
+                </div>
+              )}
+
+              {/* Combo Name and SKU */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="sm:col-span-2">
+                  <label className="text-xs font-medium text-foreground/80">Combo / Bundle Name *</label>
+                  <Input
+                    required
+                    placeholder="e.g. Necklace & Earrings Festive Combo"
+                    value={comboForm.name}
+                    onChange={(e) => setComboForm({ ...comboForm, name: e.target.value })}
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-medium text-foreground/80">Bundle SKU *</label>
+                    <button
+                      type="button"
+                      onClick={() => setComboForm((prev) => ({ ...prev, sku: generateComboSku() }))}
+                      className="text-[10px] text-muted-foreground hover:text-charcoal flex items-center gap-0.5"
+                    >
+                      <RefreshCw className="h-2.5 w-2.5" /> Auto
+                    </button>
+                  </div>
+                  <Input
+                    required
+                    placeholder="SHR-CMB-001"
+                    value={comboForm.sku}
+                    onChange={(e) => setComboForm({ ...comboForm, sku: e.target.value })}
+                    className="mt-1 font-mono uppercase text-xs"
+                  />
+                </div>
+              </div>
+
+              {/* Category and Collection */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-medium text-foreground/80">Category *</label>
+                  <select
+                    value={comboForm.category}
+                    onChange={(e) => setComboForm({ ...comboForm, category: e.target.value as CategorySlug })}
+                    className="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none"
+                  >
+                    {categories.map((c) => (
+                      <option key={c.id} value={c.slug}>{c.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-foreground/80">Collection</label>
+                  <select
+                    value={comboForm.collection}
+                    onChange={(e) => setComboForm({ ...comboForm, collection: e.target.value })}
+                    className="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none"
+                  >
+                    <option value="celeste">Celeste (Everyday Elegance)</option>
+                    <option value="noir">Noir (Bridal & Statement)</option>
+                    <option value="lumiere">Lumière (Modern Crystal)</option>
+                    <option value="essentials">Essentials (Daily Staples)</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* SECTION: Products Included in this Combo */}
+              <div className="rounded-xl border border-champagne/40 bg-accent/20 p-3.5 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="text-xs font-semibold uppercase tracking-wider text-charcoal flex items-center gap-1.5">
+                      <Sparkles className="h-3.5 w-3.5 text-champagne" /> Products included in this combo *
+                    </h4>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">
+                      Select catalogue products to include in this bundle deal
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setSelectorTarget("add");
+                      setSelectorSearch("");
+                      setSelectorCat("all");
+                      setIsSelectorOpen(true);
+                    }}
+                    className="h-8 text-xs bg-card border-champagne text-charcoal hover:bg-champagne/20 gap-1 shadow-2xs"
+                  >
+                    <Plus className="h-3.5 w-3.5 text-champagne" /> Add Product
+                  </Button>
+                </div>
+
+                {/* Selected Products List */}
+                {comboComponentDetails.length === 0 ? (
+                  <div className="rounded-lg border border-dashed border-border bg-card/60 p-6 text-center">
+                    <Package className="mx-auto h-8 w-8 text-muted-foreground/60 mb-1.5" />
+                    <p className="text-xs text-foreground/80 font-medium">No products added to this combo yet</p>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">
+                      Click &quot;+ Add Product&quot; to pick items from your catalogue
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {comboComponentDetails.map((item) => (
+                      <div
+                        key={item.productId}
+                        className="flex items-center gap-3 rounded-lg border border-border bg-card p-2.5 shadow-2xs"
+                      >
+                        <img
+                          src={item.product?.images[0] || presetJewelleryImages[0].url}
+                          alt={item.product?.name || "Product"}
+                          className="h-12 w-12 rounded-md object-cover border border-border shrink-0"
+                        />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-medium text-foreground truncate">
+                            {item.product?.name || "Catalogue Product"}
+                          </p>
+                          <div className="flex items-center gap-2 mt-0.5 text-[11px] text-muted-foreground">
+                            <span className="font-mono">{item.product?.sku}</span>
+                            <span>·</span>
+                            <span className="font-semibold text-charcoal">{formatINR(item.product?.price || 0)}</span>
+                            <span>·</span>
+                            <span className={cn(
+                              "font-medium",
+                              (item.product?.stock || 0) <= 0 ? "text-red-600" : "text-emerald-600"
+                            )}>
+                              Stock: {item.product?.stock || 0}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Quantity Counter */}
+                        <div className="flex items-center gap-1 shrink-0">
+                          <span className="text-[11px] text-muted-foreground mr-1">Qty:</span>
+                          <div className="inline-flex items-center rounded-md border border-border bg-background">
+                            <button
+                              type="button"
+                              onClick={() => handleUpdateComponentQty("add", item.productId, -1)}
+                              className="h-6 w-6 flex items-center justify-center text-muted-foreground hover:text-foreground"
+                            >
+                              <Minus className="h-3 w-3" />
+                            </button>
+                            <span className="w-6 text-center text-xs font-medium">{item.quantity}</span>
+                            <button
+                              type="button"
+                              onClick={() => handleUpdateComponentQty("add", item.productId, 1)}
+                              className="h-6 w-6 flex items-center justify-center text-muted-foreground hover:text-foreground"
+                            >
+                              <Plus className="h-3 w-3" />
+                            </button>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveComponent("add", item.productId)}
+                            className="p-1 rounded text-muted-foreground hover:bg-red-50 hover:text-red-600 ml-1 transition"
+                            title="Remove from combo"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Live Available Stock Badge */}
+                {comboForm.components.length > 0 && (
+                  <div className={cn(
+                    "rounded-lg p-2.5 text-xs flex items-center justify-between border",
+                    availableComboStock > 0 ? "bg-emerald-50/80 border-emerald-200 text-emerald-800" : "bg-red-50/80 border-red-200 text-red-700"
+                  )}>
+                    <div className="flex items-center gap-1.5">
+                      <PackageCheck className="h-4 w-4 shrink-0" />
+                      <span>
+                        <strong>Calculated Combo Stock: {availableComboStock} units</strong>
+                        <span className="text-[11px] opacity-80 block sm:inline sm:ml-1">
+                          (Derived from component inventory. Stock is deducted from components on purchase.)
+                        </span>
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* SECTION: Automatic Pricing and Calculations */}
+              <div className="rounded-xl border border-border bg-card p-3.5 space-y-3">
+                <h4 className="text-xs font-semibold uppercase tracking-wider text-charcoal">
+                  Pricing & Discount Logic
+                </h4>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-medium text-foreground/80">Combo Selling Price (₹) *</label>
+                    <Input
+                      required
+                      type="number"
+                      min="1"
+                      placeholder="e.g. 2499"
+                      value={comboForm.price || ""}
+                      onChange={(e) => setComboForm({ ...comboForm, price: Number(e.target.value) })}
+                      className="mt-1 font-semibold text-charcoal"
+                    />
+                    <p className="mt-1 text-[11px] text-muted-foreground">Admin-defined special price for the combo.</p>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-foreground/80">Total MRP / Combined MRP (₹)</label>
+                    <Input
+                      type="number"
+                      min="1"
+                      placeholder="Auto-calculated from components"
+                      value={comboForm.mrp || combinedMrp || ""}
+                      onChange={(e) => setComboForm({ ...comboForm, mrp: Number(e.target.value) })}
+                      className="mt-1"
+                    />
+                    <p className="mt-1 text-[11px] text-muted-foreground">Combined MRP of components.</p>
+                  </div>
+                </div>
+
+                {/* Real-time Summary Cards */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center text-xs pt-1">
+                  <div className="rounded-lg bg-accent/40 p-2 border border-border/70">
+                    <span className="text-[10px] text-muted-foreground uppercase block">Individual Total</span>
+                    <span className="text-sm font-semibold text-foreground mt-0.5 block">{formatINR(individualTotal)}</span>
+                  </div>
+                  <div className="rounded-lg bg-champagne/15 p-2 border border-champagne/40">
+                    <span className="text-[10px] text-charcoal uppercase block font-semibold">Combo Price</span>
+                    <span className="text-sm font-bold text-charcoal mt-0.5 block">{formatINR(Number(comboForm.price || 0))}</span>
+                  </div>
+                  <div className="rounded-lg bg-emerald-50 p-2 border border-emerald-200">
+                    <span className="text-[10px] text-emerald-800 uppercase block font-semibold">You Save</span>
+                    <span className="text-sm font-bold text-emerald-700 mt-0.5 block">{formatINR(comboSavings)}</span>
+                  </div>
+                  <div className="rounded-lg bg-emerald-50 p-2 border border-emerald-200">
+                    <span className="text-[10px] text-emerald-800 uppercase block font-semibold">Discount</span>
+                    <span className="text-sm font-bold text-emerald-700 mt-0.5 block">{comboDiscountPct}% off</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Material & Finish */}
+              <div>
+                <label className="text-xs font-medium text-foreground/80">Material & Finish</label>
+                <Input
+                  placeholder="e.g. 18k Gold Plated Brass, Baroque Pearl & Cubic Zirconia"
+                  value={comboForm.material}
+                  onChange={(e) => setComboForm({ ...comboForm, material: e.target.value })}
+                  className="mt-1"
+                />
+              </div>
+
+              {/* Main Bundle Image */}
+              <div>
+                <label className="text-xs font-medium text-foreground/80">Main Bundle Image URL</label>
+                <Input
+                  placeholder="https://..."
+                  value={comboForm.image}
+                  onChange={(e) => setComboForm({ ...comboForm, image: e.target.value })}
+                  className="mt-1"
+                />
+                <p className="mt-1.5 text-[11px] text-muted-foreground">Or choose from curated preset imagery:</p>
+                <div className="mt-1.5 flex flex-wrap gap-2">
+                  {presetJewelleryImages.map((img) => (
+                    <button
+                      key={img.label}
+                      type="button"
+                      onClick={() => setComboForm({ ...comboForm, image: img.url })}
+                      className={cn(
+                        "flex items-center gap-1.5 rounded-md border p-1 text-xs transition",
+                        comboForm.image === img.url ? "border-champagne bg-champagne/10 font-medium" : "border-border hover:bg-accent"
+                      )}
+                    >
+                      <img src={img.url} alt={img.label} className="h-6 w-6 rounded object-cover" />
+                      <span>{img.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Additional Images */}
+              <div>
+                <label className="text-xs font-medium text-foreground/80">Additional Images (comma separated URLs)</label>
+                <Input
+                  placeholder="https://image2.jpg, https://image3.jpg"
+                  value={comboForm.additionalImages}
+                  onChange={(e) => setComboForm({ ...comboForm, additionalImages: e.target.value })}
+                  className="mt-1 text-xs"
+                />
+              </div>
+
+              {/* Bundle Description */}
+              <div>
+                <label className="text-xs font-medium text-foreground/80">Bundle Description</label>
+                <Textarea
+                  rows={2}
+                  placeholder="Describe the styling synergy, occasion compatibility, and bundle savings..."
+                  value={comboForm.description}
+                  onChange={(e) => setComboForm({ ...comboForm, description: e.target.value })}
+                  className="mt-1"
+                />
+              </div>
+
+              {/* Tags and Status */}
+              <div className="flex flex-wrap items-center justify-between gap-4 pt-1 text-sm border-t border-border/60">
+                <div className="flex items-center gap-5">
+                  <label className="flex items-center gap-2 cursor-pointer text-xs">
+                    <input
+                      type="checkbox"
+                      checked={comboForm.newArrival}
+                      onChange={(e) => setComboForm({ ...comboForm, newArrival: e.target.checked })}
+                      className="h-4 w-4 rounded accent-charcoal"
+                    />
+                    <span>New Arrival</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer text-xs">
+                    <input
+                      type="checkbox"
+                      checked={comboForm.bestseller}
+                      onChange={(e) => setComboForm({ ...comboForm, bestseller: e.target.checked })}
+                      className="h-4 w-4 rounded accent-charcoal"
+                    />
+                    <span>Bestseller</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer text-xs">
+                    <input
+                      type="checkbox"
+                      checked={comboForm.featured}
+                      onChange={(e) => setComboForm({ ...comboForm, featured: e.target.checked })}
+                      className="h-4 w-4 rounded accent-charcoal"
+                    />
+                    <span>Featured</span>
+                  </label>
+                </div>
+
+                <div className="flex items-center gap-3 text-xs">
+                  <span className="font-medium text-muted-foreground">Status:</span>
+                  <label className="flex items-center gap-1.5 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="combo-status"
+                      value="active"
+                      checked={comboForm.status === "active"}
+                      onChange={() => setComboForm({ ...comboForm, status: "active" })}
+                      className="accent-charcoal"
+                    />
+                    <span>Active</span>
+                  </label>
+                  <label className="flex items-center gap-1.5 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="combo-status"
+                      value="draft"
+                      checked={comboForm.status === "draft"}
+                      onChange={() => setComboForm({ ...comboForm, status: "draft" })}
+                      className="accent-charcoal"
+                    />
+                    <span>Draft</span>
+                  </label>
+                </div>
+              </div>
+
+              <DialogFooter className="mt-4 pt-2 border-t border-border">
+                <Button type="button" variant="outline" onClick={() => setIsAddOpen(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" className="bg-charcoal text-ivory hover:bg-charcoal/90 gap-1.5">
+                  <Plus className="h-4 w-4" /> Create Combo Product
+                </Button>
+              </DialogFooter>
+            </form>
+          )}
         </DialogContent>
       </Dialog>
 
-      {/* View Product Modal */}
+      {/* Searchable Product Selector Modal for Combo Components */}
+      <Dialog open={isSelectorOpen} onOpenChange={setIsSelectorOpen}>
+        <DialogContent className="w-[calc(100vw-1.5rem)] sm:max-w-xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="font-serif text-lg flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-champagne" /> Add Products to Combo
+            </DialogTitle>
+            <DialogDescription>
+              Search and select existing products from your store catalogue to include in this bundle.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3 py-2">
+            {/* Search and Category Filter */}
+            <div className="flex flex-col sm:flex-row gap-2">
+              <div className="flex items-center gap-2 rounded-md border border-border bg-card px-3 py-1.5 flex-1 shadow-2xs">
+                <Search className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                <input
+                  value={selectorSearch}
+                  onChange={(e) => setSelectorSearch(e.target.value)}
+                  placeholder="Search by product name or SKU…"
+                  className="w-full bg-transparent text-xs outline-none"
+                />
+                {selectorSearch && (
+                  <button onClick={() => setSelectorSearch("")} className="text-xs text-muted-foreground">
+                    ✕
+                  </button>
+                )}
+              </div>
+              <select
+                value={selectorCat}
+                onChange={(e) => setSelectorCat(e.target.value)}
+                className="h-8 rounded-md border border-border bg-card px-2.5 text-xs outline-none"
+              >
+                <option value="all">All Categories</option>
+                {categories.map((c) => (
+                  <option key={c.id} value={c.slug}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Candidate Products List */}
+            <div className="max-h-72 overflow-y-auto space-y-2 pr-1">
+              {candidateProducts.length === 0 ? (
+                <div className="py-8 text-center text-xs text-muted-foreground">
+                  No matching catalogue products found.
+                </div>
+              ) : (
+                candidateProducts.map((p) => {
+                  const targetList = selectorTarget === "add" ? comboForm.components : editComboForm.components;
+                  const alreadySelected = targetList.find((c) => c.productId === p.id);
+
+                  return (
+                    <div
+                      key={p.id}
+                      className="flex items-center justify-between gap-3 rounded-lg border border-border/80 bg-card p-2.5 hover:border-champagne transition shadow-2xs"
+                    >
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <img
+                          src={p.images[0]}
+                          alt={p.name}
+                          className="h-11 w-11 rounded-md object-cover border border-border shrink-0"
+                        />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-medium text-foreground truncate">{p.name}</p>
+                          <div className="flex items-center gap-2 text-[11px] text-muted-foreground mt-0.5">
+                            <span className="font-mono">{p.sku}</span>
+                            <span>·</span>
+                            <span className="font-semibold text-charcoal">{formatINR(p.price)}</span>
+                            <span>·</span>
+                            <span className={cn(
+                              "font-medium",
+                              p.stock <= 0 ? "text-red-600" : "text-emerald-600"
+                            )}>
+                              Stock: {p.stock}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={() => handleAddComponentToCombo(selectorTarget, p)}
+                        variant={alreadySelected ? "secondary" : "outline"}
+                        className={cn(
+                          "h-8 text-xs shrink-0 gap-1",
+                          alreadySelected && "border-champagne bg-champagne/15 text-charcoal font-semibold"
+                        )}
+                      >
+                        {alreadySelected ? (
+                          <>
+                            <Check className="h-3.5 w-3.5 text-emerald-700" />
+                            <span>Added ({alreadySelected.quantity}) +1</span>
+                          </>
+                        ) : (
+                          <>
+                            <Plus className="h-3.5 w-3.5" />
+                            <span>Add</span>
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+
+          <DialogFooter className="mt-2 pt-2 border-t border-border">
+            <Button type="button" onClick={() => setIsSelectorOpen(false)} className="bg-charcoal text-ivory">
+              Done
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* View Product Modal (Handles both Single and Combo Products) */}
       {viewProduct && (
         <Dialog open={!!viewProduct} onOpenChange={(open) => !open && setViewProduct(null)}>
-          <DialogContent className="w-[calc(100vw-1.5rem)] sm:max-w-md max-h-[90vh] overflow-y-auto">
+          <DialogContent className="w-[calc(100vw-1.5rem)] sm:max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle className="font-serif text-lg">Product Details</DialogTitle>
+              <div className="flex items-center justify-between">
+                <DialogTitle className="font-serif text-lg">Product Details</DialogTitle>
+                {viewProduct.productType === "combo" && (
+                  <Badge className="bg-amber-800 text-amber-50 text-[10px] font-bold uppercase tracking-wider">
+                    Combo Bundle
+                  </Badge>
+                )}
+              </div>
             </DialogHeader>
             <div className="space-y-4 py-2">
               <div className="flex flex-col sm:flex-row gap-3.5 sm:gap-4 items-center sm:items-start text-center sm:text-left">
@@ -1292,17 +2286,58 @@ function ProductsSection() {
                         {formatINR(viewProduct.mrp)}
                       </span>
                     )}
+                    {viewProduct.mrp > viewProduct.price && (
+                      <span className="text-xs text-emerald-700 font-medium">
+                        ({Math.round(((viewProduct.mrp - viewProduct.price) / viewProduct.mrp) * 100)}% off)
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
 
               <Separator />
 
+              {/* Combo Contents breakdown if combo */}
+              {viewProduct.productType === "combo" && viewProduct.comboComponents && viewProduct.comboComponents.length > 0 && (
+                <div className="rounded-lg border border-champagne/40 bg-champagne/10 p-3 space-y-2">
+                  <p className="font-semibold text-charcoal text-xs flex items-center gap-1.5">
+                    <Sparkles className="h-3.5 w-3.5 text-champagne" /> Included Components ({viewProduct.comboComponents.length} items):
+                  </p>
+                  <div className="space-y-1.5">
+                    {viewProduct.comboComponents.map((c, i) => {
+                      const compP = products.find((item) => item.id === c.componentProductId);
+                      return (
+                        <div key={i} className="flex items-center gap-2.5 rounded bg-background/80 p-2 text-xs border border-border/50">
+                          <img
+                            src={compP?.images[0] || viewProduct.images[0]}
+                            alt={compP?.name}
+                            className="h-9 w-9 rounded object-cover border border-border shrink-0"
+                          />
+                          <div className="min-w-0 flex-1">
+                            <p className="font-medium truncate">{compP?.name || "Component Item"}</p>
+                            <p className="text-[11px] text-muted-foreground">
+                              SKU: {compP?.sku} · Single: {formatINR(compP?.price || 0)} · Live Stock: {compP?.stock ?? 0}
+                            </p>
+                          </div>
+                          <span className="rounded bg-accent px-2 py-0.5 font-semibold text-xs shrink-0">
+                            Qty: {c.quantity}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                 <div>
                   <span className="text-muted-foreground">Inventory Status:</span>
                   <p className="font-medium mt-0.5">
-                    {viewProduct.stock > 0 ? `${viewProduct.stock} units in stock` : "Out of stock"}
+                    {viewProduct.productType === "combo"
+                      ? `${calculateComboStock(viewProduct.comboComponents, products)} units available (calculated from components)`
+                      : viewProduct.stock > 0
+                      ? `${viewProduct.stock} units in stock`
+                      : "Out of stock"}
                   </p>
                 </div>
                 <div>
@@ -1347,7 +2382,7 @@ function ProductsSection() {
         </Dialog>
       )}
 
-      {/* Edit Product Modal */}
+      {/* Edit Single Product Modal */}
       {editProduct && (
         <Dialog open={!!editProduct} onOpenChange={(open) => !open && setEditProduct(null)}>
           <DialogContent className="w-[calc(100vw-1.5rem)] sm:max-w-lg max-h-[90vh] overflow-y-auto">
@@ -1471,6 +2506,349 @@ function ProductsSection() {
                 </Button>
                 <Button type="submit" className="bg-charcoal text-ivory hover:bg-charcoal/90">
                   Save Changes
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Edit Combo / Bundle Modal (Requirement 7) */}
+      {editComboProduct && (
+        <Dialog open={!!editComboProduct} onOpenChange={(open) => !open && setEditComboProduct(null)}>
+          <DialogContent className="w-[calc(100vw-1.5rem)] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <DialogTitle className="font-serif text-xl flex items-center gap-2">
+                    <Layers className="h-5 w-5 text-amber-700" /> Edit Combo / Bundle
+                  </DialogTitle>
+                  <DialogDescription>
+                    Configure component products, pricing, and bundle details for {editComboProduct.name}.
+                  </DialogDescription>
+                </div>
+                <Badge className="bg-amber-800 text-amber-50 uppercase text-[10px]">
+                  Combo
+                </Badge>
+              </div>
+            </DialogHeader>
+
+            <form onSubmit={handleSaveEditCombo} className="space-y-4 py-2">
+              {editComboError && (
+                <div className="rounded-lg bg-red-50 border border-red-200 p-3 text-xs text-red-700 flex items-center gap-2">
+                  <AlertCircle className="h-4 w-4 shrink-0 text-red-600" />
+                  <span>{editComboError}</span>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="sm:col-span-2">
+                  <label className="text-xs font-medium text-foreground/80">Combo Name *</label>
+                  <Input
+                    required
+                    value={editComboForm.name}
+                    onChange={(e) => setEditComboForm({ ...editComboForm, name: e.target.value })}
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-foreground/80">Bundle SKU *</label>
+                  <Input
+                    required
+                    value={editComboForm.sku}
+                    onChange={(e) => setEditComboForm({ ...editComboForm, sku: e.target.value })}
+                    className="mt-1 font-mono uppercase text-xs"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-medium text-foreground/80">Category</label>
+                  <select
+                    value={editComboForm.category}
+                    onChange={(e) => setEditComboForm({ ...editComboForm, category: e.target.value as CategorySlug })}
+                    className="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none"
+                  >
+                    {categories.map((c) => (
+                      <option key={c.id} value={c.slug}>{c.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-foreground/80">Collection</label>
+                  <select
+                    value={editComboForm.collection}
+                    onChange={(e) => setEditComboForm({ ...editComboForm, collection: e.target.value })}
+                    className="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none"
+                  >
+                    <option value="celeste">Celeste (Everyday Elegance)</option>
+                    <option value="noir">Noir (Bridal & Statement)</option>
+                    <option value="lumiere">Lumière (Modern Crystal)</option>
+                    <option value="essentials">Essentials (Daily Staples)</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Components included in Edit Mode */}
+              <div className="rounded-xl border border-champagne/40 bg-accent/20 p-3.5 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="text-xs font-semibold uppercase tracking-wider text-charcoal flex items-center gap-1.5">
+                      <Sparkles className="h-3.5 w-3.5 text-champagne" /> Products included in this combo *
+                    </h4>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">
+                      Add, remove, or modify quantities of bundled products
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setSelectorTarget("edit");
+                      setSelectorSearch("");
+                      setSelectorCat("all");
+                      setIsSelectorOpen(true);
+                    }}
+                    className="h-8 text-xs bg-card border-champagne text-charcoal hover:bg-champagne/20 gap-1 shadow-2xs"
+                  >
+                    <Plus className="h-3.5 w-3.5 text-champagne" /> Add Product
+                  </Button>
+                </div>
+
+                {editComboComponentDetails.length === 0 ? (
+                  <div className="rounded-lg border border-dashed border-border bg-card/60 p-6 text-center">
+                    <p className="text-xs text-foreground/80 font-medium">No products in this combo</p>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">
+                      Click &quot;+ Add Product&quot; to pick items from your catalogue
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {editComboComponentDetails.map((item) => (
+                      <div
+                        key={item.productId}
+                        className="flex items-center gap-3 rounded-lg border border-border bg-card p-2.5 shadow-2xs"
+                      >
+                        <img
+                          src={item.product?.images[0] || presetJewelleryImages[0].url}
+                          alt={item.product?.name || "Product"}
+                          className="h-12 w-12 rounded-md object-cover border border-border shrink-0"
+                        />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-medium text-foreground truncate">
+                            {item.product?.name || "Catalogue Product"}
+                          </p>
+                          <div className="flex items-center gap-2 mt-0.5 text-[11px] text-muted-foreground">
+                            <span className="font-mono">{item.product?.sku}</span>
+                            <span>·</span>
+                            <span className="font-semibold text-charcoal">{formatINR(item.product?.price || 0)}</span>
+                            <span>·</span>
+                            <span className={cn(
+                              "font-medium",
+                              (item.product?.stock || 0) <= 0 ? "text-red-600" : "text-emerald-600"
+                            )}>
+                              Stock: {item.product?.stock || 0}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Quantity Counter */}
+                        <div className="flex items-center gap-1 shrink-0">
+                          <span className="text-[11px] text-muted-foreground mr-1">Qty:</span>
+                          <div className="inline-flex items-center rounded-md border border-border bg-background">
+                            <button
+                              type="button"
+                              onClick={() => handleUpdateComponentQty("edit", item.productId, -1)}
+                              className="h-6 w-6 flex items-center justify-center text-muted-foreground hover:text-foreground"
+                            >
+                              <Minus className="h-3 w-3" />
+                            </button>
+                            <span className="w-6 text-center text-xs font-medium">{item.quantity}</span>
+                            <button
+                              type="button"
+                              onClick={() => handleUpdateComponentQty("edit", item.productId, 1)}
+                              className="h-6 w-6 flex items-center justify-center text-muted-foreground hover:text-foreground"
+                            >
+                              <Plus className="h-3 w-3" />
+                            </button>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveComponent("edit", item.productId)}
+                            className="p-1 rounded text-muted-foreground hover:bg-red-50 hover:text-red-600 ml-1 transition"
+                            title="Remove from combo"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Available Stock Warning */}
+                {editComboForm.components.length > 0 && (
+                  <div className={cn(
+                    "rounded-lg p-2.5 text-xs flex items-center justify-between border",
+                    editAvailableComboStock > 0 ? "bg-emerald-50/80 border-emerald-200 text-emerald-800" : "bg-red-50/80 border-red-200 text-red-700"
+                  )}>
+                    <div className="flex items-center gap-1.5">
+                      <PackageCheck className="h-4 w-4 shrink-0" />
+                      <span>
+                        <strong>Calculated Combo Stock: {editAvailableComboStock} units</strong>
+                        <span className="text-[11px] opacity-80 block sm:inline sm:ml-1">
+                          (Derived from component inventory)
+                        </span>
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Pricing in Edit Mode */}
+              <div className="rounded-xl border border-border bg-card p-3.5 space-y-3">
+                <h4 className="text-xs font-semibold uppercase tracking-wider text-charcoal">
+                  Pricing & Discount Logic
+                </h4>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-medium text-foreground/80">Combo Selling Price (₹) *</label>
+                    <Input
+                      required
+                      type="number"
+                      min="1"
+                      value={editComboForm.price}
+                      onChange={(e) => setEditComboForm({ ...editComboForm, price: Number(e.target.value) })}
+                      className="mt-1 font-semibold text-charcoal"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-foreground/80">Total MRP (₹)</label>
+                    <Input
+                      type="number"
+                      min="1"
+                      value={editComboForm.mrp}
+                      onChange={(e) => setEditComboForm({ ...editComboForm, mrp: Number(e.target.value) })}
+                      className="mt-1"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center text-xs pt-1">
+                  <div className="rounded-lg bg-accent/40 p-2 border border-border/70">
+                    <span className="text-[10px] text-muted-foreground uppercase block">Individual Total</span>
+                    <span className="text-sm font-semibold text-foreground mt-0.5 block">{formatINR(editIndividualTotal)}</span>
+                  </div>
+                  <div className="rounded-lg bg-champagne/15 p-2 border border-champagne/40">
+                    <span className="text-[10px] text-charcoal uppercase block font-semibold">Combo Price</span>
+                    <span className="text-sm font-bold text-charcoal mt-0.5 block">{formatINR(Number(editComboForm.price || 0))}</span>
+                  </div>
+                  <div className="rounded-lg bg-emerald-50 p-2 border border-emerald-200">
+                    <span className="text-[10px] text-emerald-800 uppercase block font-semibold">You Save</span>
+                    <span className="text-sm font-bold text-emerald-700 mt-0.5 block">{formatINR(editComboSavings)}</span>
+                  </div>
+                  <div className="rounded-lg bg-emerald-50 p-2 border border-emerald-200">
+                    <span className="text-[10px] text-emerald-800 uppercase block font-semibold">Discount</span>
+                    <span className="text-sm font-bold text-emerald-700 mt-0.5 block">{editComboDiscountPct}% off</span>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-medium text-foreground/80">Material & Finish</label>
+                <Input
+                  value={editComboForm.material}
+                  onChange={(e) => setEditComboForm({ ...editComboForm, material: e.target.value })}
+                  className="mt-1"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-medium text-foreground/80">Main Image URL</label>
+                <Input
+                  value={editComboForm.image}
+                  onChange={(e) => setEditComboForm({ ...editComboForm, image: e.target.value })}
+                  className="mt-1"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-medium text-foreground/80">Description</label>
+                <Textarea
+                  rows={3}
+                  value={editComboForm.description}
+                  onChange={(e) => setEditComboForm({ ...editComboForm, description: e.target.value })}
+                  className="mt-1"
+                />
+              </div>
+
+              <div className="flex flex-wrap items-center justify-between gap-4 pt-1 text-sm border-t border-border/60">
+                <div className="flex items-center gap-5">
+                  <label className="flex items-center gap-2 cursor-pointer text-xs">
+                    <input
+                      type="checkbox"
+                      checked={editComboForm.newArrival}
+                      onChange={(e) => setEditComboForm({ ...editComboForm, newArrival: e.target.checked })}
+                      className="h-4 w-4 rounded accent-charcoal"
+                    />
+                    <span>New Arrival</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer text-xs">
+                    <input
+                      type="checkbox"
+                      checked={editComboForm.bestseller}
+                      onChange={(e) => setEditComboForm({ ...editComboForm, bestseller: e.target.checked })}
+                      className="h-4 w-4 rounded accent-charcoal"
+                    />
+                    <span>Bestseller</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer text-xs">
+                    <input
+                      type="checkbox"
+                      checked={editComboForm.featured}
+                      onChange={(e) => setEditComboForm({ ...editComboForm, featured: e.target.checked })}
+                      className="h-4 w-4 rounded accent-charcoal"
+                    />
+                    <span>Featured</span>
+                  </label>
+                </div>
+
+                <div className="flex items-center gap-3 text-xs">
+                  <span className="font-medium text-muted-foreground">Status:</span>
+                  <label className="flex items-center gap-1.5 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="edit-combo-status"
+                      value="active"
+                      checked={editComboForm.status === "active"}
+                      onChange={() => setEditComboForm({ ...editComboForm, status: "active" })}
+                      className="accent-charcoal"
+                    />
+                    <span>Active</span>
+                  </label>
+                  <label className="flex items-center gap-1.5 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="edit-combo-status"
+                      value="draft"
+                      checked={editComboForm.status === "draft"}
+                      onChange={() => setEditComboForm({ ...editComboForm, status: "draft" })}
+                      className="accent-charcoal"
+                    />
+                    <span>Draft</span>
+                  </label>
+                </div>
+              </div>
+
+              <DialogFooter className="mt-4 pt-2 border-t border-border">
+                <Button type="button" variant="outline" onClick={() => setEditComboProduct(null)}>
+                  Cancel
+                </Button>
+                <Button type="submit" className="bg-charcoal text-ivory hover:bg-charcoal/90">
+                  Save Combo Changes
                 </Button>
               </DialogFooter>
             </form>
@@ -1888,7 +3266,25 @@ function ShippingLabelModal({
                     <tbody className="divide-y divide-black/30">
                       {order.items.map((i, idx) => (
                         <tr key={idx}>
-                          <td className="p-2 border-r border-black/30 font-medium">{i.name}</td>
+                          <td className="p-2 border-r border-black/30 font-medium">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span>{i.name}</span>
+                              {i.isCombo && (
+                                <span className="text-[9px] bg-amber-100 text-amber-900 border border-amber-300 font-bold px-1.5 py-0.2 rounded">
+                                  COMBO
+                                </span>
+                              )}
+                            </div>
+                            {i.isCombo && i.comboComponents && i.comboComponents.length > 0 && (
+                              <div className="mt-1 text-[10px] text-gray-600 font-normal space-y-0.5">
+                                {i.comboComponents.map((c, cIdx) => (
+                                  <div key={cIdx}>
+                                    • {c.name} ({c.sku}) × {c.qty * i.qty}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </td>
                           <td className="p-2 border-r border-black/30 text-center">{i.colorName}</td>
                           <td className="p-2 border-r border-black/30 text-center font-bold">{i.qty}</td>
                           <td className="p-2 border-r border-black/30 text-right">{formatINR(i.price)}</td>
@@ -2407,8 +3803,28 @@ function OrdersSection({
                     <div key={idx} className="flex items-center gap-3 py-1 text-sm border-b border-border/40 last:border-0">
                       <img src={item.image} alt={item.name} className="h-12 w-12 rounded-md object-cover border border-border shrink-0" />
                       <div className="min-w-0 flex-1">
-                        <p className="font-medium truncate">{item.name}</p>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <p className="font-medium truncate">{item.name}</p>
+                          {item.isCombo && (
+                            <Badge className="bg-amber-800 text-amber-50 hover:bg-amber-800 border-amber-600/40 text-[9px] px-1.5 py-0 font-bold">
+                              COMBO
+                            </Badge>
+                          )}
+                        </div>
                         <p className="text-xs text-muted-foreground">Color: {item.colorName} · Qty: {item.qty}</p>
+                        {item.isCombo && item.comboComponents && item.comboComponents.length > 0 && (
+                          <div className="mt-1.5 pl-2.5 border-l-2 border-amber-300 bg-amber-50/60 p-1.5 rounded text-[11px] text-amber-950 space-y-0.5">
+                            <span className="font-semibold text-amber-900 block text-[10px] uppercase tracking-wider">
+                              Bundle Components (stock deducted):
+                            </span>
+                            {item.comboComponents.map((c, cIdx) => (
+                              <div key={cIdx} className="flex items-center justify-between text-muted-foreground">
+                                <span>• {c.name} ({c.sku})</span>
+                                <span className="font-mono font-medium text-amber-900">Qty: {c.qty * item.qty}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                       <div className="text-right shrink-0">
                         <p className="font-medium">{formatINR(item.price * item.qty)}</p>

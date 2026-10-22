@@ -797,32 +797,115 @@ export const products: Product[] = [
     newArrival: false,
     featured: false,
   },
+  {
+    id: "cmb-festive-pearl-pendant",
+    sku: "SHR-CMB-001",
+    name: "Festive Pearl & Layered Pendant Jewellery Combo",
+    slug: "festive-pearl-layered-pendant-combo",
+    productType: "combo",
+    category: "sets",
+    subcategory: "combo-deals",
+    collection: "Celeste",
+    price: 2499,
+    mrp: 3098,
+    images: [
+      IMG.set1,
+      IMG.earring1,
+      IMG.necklace1,
+      IMG.set2,
+    ],
+    colors: [goldTone, silverTone],
+    sizes: ["One Size"],
+    material: "18k Gold Plated Brass, Baroque Pearl & Cubic Zirconia",
+    weight: "34 g (total)",
+    dimensions: "Earrings: 4.5 cm drop; Necklace: 40-50 cm layered",
+    care: "Keep away from water and fragrance. Store each component in the included soft pouch.",
+    description:
+      "A curated festive combination of our two most loved handcrafted creations: the Aurora Pearl Drop Earrings and the Elara Layered Pendant Necklace. Enjoy seamless coordinated elegance with an exclusive bundle discount.",
+    rating: 4.9,
+    reviewCount: 42,
+    reviews: [
+      review("rc1", "Sunita M.", 5, "Stunning set & great deal!", "Bought this combo for Diwali, loved both pieces! Saved over ₹500.", "14 Oct 2026", 19),
+      review("rc2", "Radhika K.", 5, "Perfect match", "The necklace and earrings match each other like they were made together.", "02 Oct 2026", 11),
+    ],
+    tags: ["combo", "festive", "bundle", "pearl", "necklace", "earrings", "bestseller"],
+    badges: ["bestseller", "combo"],
+    stock: 15,
+    bestseller: true,
+    newArrival: true,
+    featured: true,
+    status: "active",
+    comboComponents: [
+      { componentProductId: "p1", quantity: 1 },
+      { componentProductId: "p5", quantity: 1 },
+    ],
+  },
 ];
 
+let storeGetter: (() => Product[]) | null = null;
+
+export function setProductStoreGetter(fn: () => Product[]) {
+  storeGetter = fn;
+}
+
+export function getAllProducts(): Product[] {
+  return storeGetter ? storeGetter() : products;
+}
+
+export function calculateComboStock(
+  components: { componentProductId: string; quantity: number }[] | undefined,
+  allList: Product[] = getAllProducts()
+): number {
+  if (!components || components.length === 0) return 0;
+  let minStock = Infinity;
+  for (const comp of components) {
+    const p = allList.find((item) => item.id === comp.componentProductId);
+    if (!p) return 0;
+    const reqQty = comp.quantity || 1;
+    const available = Math.floor((p.stock || 0) / reqQty);
+    if (available < minStock) minStock = available;
+  }
+  return minStock === Infinity ? 0 : Math.max(0, minStock);
+}
+
 export function getProduct(id: string) {
-  return products.find((p) => p.id === id || p.slug === id);
+  const list = getAllProducts();
+  const found = list.find((p) => p.id === id || p.slug === id);
+  if (!found) return undefined;
+  if (found.productType === "combo") {
+    return {
+      ...found,
+      stock: calculateComboStock(found.comboComponents, list),
+    };
+  }
+  return found;
 }
 
 export function getProductsByCategory(slug: string) {
-  return products.filter((p) => p.category === slug);
+  const list = getAllProducts();
+  return list.filter((p) => p.category === slug);
 }
 
 export function getFeatured() {
-  return products.filter((p) => p.featured);
+  const list = getAllProducts();
+  return list.filter((p) => p.featured);
 }
 
 export function getBestsellers() {
-  return products.filter((p) => p.bestseller);
+  const list = getAllProducts();
+  return list.filter((p) => p.bestseller);
 }
 
 export function getNewArrivals() {
-  return products.filter((p) => p.newArrival);
+  const list = getAllProducts();
+  return list.filter((p) => p.newArrival);
 }
 
 export function searchProducts(query: string) {
   const q = query.trim().toLowerCase();
   if (!q) return [];
-  return products.filter((p) => {
+  const list = getAllProducts();
+  return list.filter((p) => {
     return (
       p.name.toLowerCase().includes(q) ||
       p.sku.toLowerCase().includes(q) ||
@@ -830,6 +913,7 @@ export function searchProducts(query: string) {
       p.subcategory.toLowerCase().includes(q) ||
       p.collection.toLowerCase().includes(q) ||
       p.material.toLowerCase().includes(q) ||
+      (p.productType && p.productType.toLowerCase().includes(q)) ||
       p.tags.some((t) => t.toLowerCase().includes(q))
     );
   });

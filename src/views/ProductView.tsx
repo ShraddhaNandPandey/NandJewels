@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useStore, formatINR, discountPct } from "@/store/useStore";
-import { getProduct, products as allProducts } from "@/data/products";
+import { getProduct, products as allProducts, calculateComboStock } from "@/data/products";
 import { getCategory } from "@/data/categories";
 import { ProductCard } from "@/components/product/ProductCard";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
@@ -25,6 +25,9 @@ import {
   Share2,
   ThumbsUp,
   MapPin,
+  Sparkles,
+  Layers,
+  PackageCheck,
 } from "lucide-react";
 
 export function ProductView() {
@@ -36,8 +39,13 @@ export function ProductView() {
   const addRecentlyViewed = useStore((s) => s.addRecentlyViewed);
   const recentlyViewed = useStore((s) => s.recentlyViewed);
   const pushToast = useStore((s) => s.pushToast);
+  const allProductsList = useStore((s) => s.products || allProducts);
 
-  const product = params.id ? getProduct(params.id) : undefined;
+  const product = useMemo(() => {
+    if (!params.id) return undefined;
+    const found = allProductsList.find((p) => p.id === params.id || p.slug === params.id);
+    return found || getProduct(params.id);
+  }, [params.id, allProductsList]);
 
   const [activeImg, setActiveImg] = useState(0);
   const [colorId, setColorId] = useState(product?.colors[0]?.id || "");
@@ -59,20 +67,43 @@ export function ProductView() {
     }
   }, [product?.id]);
 
+  const isCombo = product?.productType === "combo";
+  const effectiveStock = useMemo(() => {
+    if (!product) return 0;
+    return isCombo
+      ? calculateComboStock(product.comboComponents, allProductsList)
+      : product.stock;
+  }, [product, isCombo, allProductsList]);
+
+  const comboItems = useMemo(() => {
+    if (!product || !isCombo || !product.comboComponents) return [];
+    return product.comboComponents.map((c) => {
+      const item = allProductsList.find((p) => p.id === c.componentProductId) || getProduct(c.componentProductId);
+      return {
+        component: c,
+        product: item,
+      };
+    });
+  }, [product, isCombo, allProductsList]);
+
+  const individualTotal = useMemo(() => {
+    return comboItems.reduce((acc, ci) => acc + (ci.product?.price || 0) * ci.component.quantity, 0);
+  }, [comboItems]);
+
   const related = useMemo(() => {
     if (!product) return [];
-    return allProducts
+    return allProductsList
       .filter((p) => p.id !== product.id && p.category === product.category)
       .slice(0, 4);
-  }, [product]);
+  }, [product, allProductsList]);
 
   const recentlyViewedProducts = useMemo(() => {
     return recentlyViewed
       .filter((id) => id !== product?.id)
-      .map((id) => getProduct(id))
+      .map((id) => allProductsList.find((p) => p.id === id || p.slug === id) || getProduct(id))
       .filter(Boolean)
       .slice(0, 4) as NonNullable<ReturnType<typeof getProduct>>[];
-  }, [recentlyViewed, product?.id]);
+  }, [recentlyViewed, product?.id, allProductsList]);
 
   if (!product) {
     return (
@@ -85,8 +116,8 @@ export function ProductView() {
 
   const pct = discountPct(product.price, product.mrp);
   const selectedColor = product.colors.find((c) => c.id === colorId);
-  const outOfStock = product.stock <= 0;
-  const lowStock = product.stock > 0 && product.stock <= 8;
+  const outOfStock = effectiveStock <= 0;
+  const lowStock = effectiveStock > 0 && effectiveStock <= 8;
 
   const ratingDist = [5, 4, 3, 2, 1].map((star) => {
     // derive a believable distribution
@@ -130,15 +161,15 @@ export function ProductView() {
 
       <div className="mt-6 grid gap-8 lg:grid-cols-2 lg:gap-12">
         {/* Gallery */}
-        <div className="flex flex-col-reverse gap-3 sm:flex-row">
-          <div className="flex gap-3 sm:flex-col">
+        <div className="flex flex-col-reverse gap-3 sm:flex-row min-w-0">
+          <div className="flex gap-2.5 sm:gap-3 overflow-x-auto no-scrollbar sm:overflow-visible pb-1 sm:pb-0 sm:flex-col shrink-0">
             {product.images.map((img, i) => (
               <button
                 key={i}
                 onClick={() => setActiveImg(i)}
                 className={cn(
-                  "h-16 w-16 shrink-0 overflow-hidden rounded-md border-2 transition",
-                  activeImg === i ? "border-charcoal" : "border-transparent opacity-70 hover:opacity-100"
+                  "h-14 w-14 sm:h-16 sm:w-16 shrink-0 overflow-hidden rounded-lg border-2 transition",
+                  activeImg === i ? "border-charcoal shadow-xs" : "border-transparent opacity-70 hover:opacity-100"
                 )}
               >
                 <img src={img} alt={`${product.name} ${i + 1}`} className="h-full w-full object-cover" loading="lazy" />
@@ -161,14 +192,14 @@ export function ProductView() {
                 <>
                   <button
                     onClick={() => setActiveImg((i) => (i - 1 + product.images.length) % product.images.length)}
-                    className="absolute left-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-background/80 opacity-0 transition group-hover:opacity-100"
+                    className="absolute left-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-background/80 sm:opacity-0 transition sm:group-hover:opacity-100 shadow-sm"
                     aria-label="Previous image"
                   >
                     <ChevronLeft className="h-5 w-5" />
                   </button>
                   <button
                     onClick={() => setActiveImg((i) => (i + 1) % product.images.length)}
-                    className="absolute right-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-background/80 opacity-0 transition group-hover:opacity-100"
+                    className="absolute right-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-background/80 sm:opacity-0 transition sm:group-hover:opacity-100 shadow-sm"
                     aria-label="Next image"
                   >
                     <ChevronRight className="h-5 w-5" />
@@ -211,18 +242,111 @@ export function ProductView() {
             <span className="text-sm text-muted-foreground">SKU: {product.sku}</span>
           </div>
 
-          <div className="mt-4 flex items-end gap-3">
-            <span className="font-serif text-3xl">{formatINR(product.price)}</span>
+          <div className="mt-4 flex items-end gap-3 flex-wrap">
+            <span className="font-serif text-3xl text-charcoal">{formatINR(product.price)}</span>
             {product.mrp > product.price && (
               <span className="text-lg text-muted-foreground line-through">{formatINR(product.mrp)}</span>
             )}
             {pct > 0 && (
-              <span className="mb-1 rounded bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">
+              <span className="mb-1 rounded-md bg-emerald-100 text-emerald-800 border border-emerald-300 px-2 py-0.5 text-xs font-semibold">
                 Save {pct}%
               </span>
             )}
+            {isCombo && (
+              <span className="mb-1 rounded-md bg-amber-800 text-amber-50 px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider flex items-center gap-1">
+                <Layers className="h-3 w-3" /> Combo Deal
+              </span>
+            )}
           </div>
-          <p className="mt-1 text-xs text-muted-foreground">Inclusive of all taxes</p>
+          <p className="mt-1 text-xs text-muted-foreground">Inclusive of all taxes · Verified Genuine Jewellery</p>
+
+          {/* Combo Includes Section */}
+          {isCombo && comboItems.length > 0 && (
+            <div className="mt-6 rounded-xl border border-champagne/50 bg-champagne/10 p-4.5 space-y-3.5 shadow-2xs">
+              <div className="flex items-center justify-between border-b border-champagne/30 pb-2.5">
+                <div className="flex items-center gap-2">
+                  <div className="flex h-7 w-7 items-center justify-center rounded-full bg-champagne/30 text-charcoal">
+                    <Sparkles className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <h3 className="font-serif text-base font-semibold text-charcoal leading-tight">
+                      Combo Includes
+                    </h3>
+                    <p className="text-[11px] text-muted-foreground">
+                      Curated set of {comboItems.length} complementary jewellery pieces
+                    </p>
+                  </div>
+                </div>
+                <span className="text-xs font-semibold text-charcoal bg-champagne/30 px-2 py-1 rounded-md">
+                  Bundle Price: {formatINR(product.price)}
+                </span>
+              </div>
+
+              {/* Items List */}
+              <div className="space-y-2">
+                {comboItems.map(({ component, product: compProduct }, idx) => (
+                  <div
+                    key={idx}
+                    onClick={() => compProduct && navigate("product", { id: compProduct.id })}
+                    className="flex items-center gap-3 rounded-lg border border-border/80 bg-background/90 p-2.5 shadow-2xs hover:border-champagne transition cursor-pointer group"
+                  >
+                    <img
+                      src={compProduct?.images[0] || product.images[0]}
+                      alt={compProduct?.name}
+                      className="h-12 w-12 rounded-md object-cover border border-border shrink-0 group-hover:scale-105 transition"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5">
+                        <Check className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                        <p className="font-medium text-xs sm:text-sm text-foreground truncate group-hover:text-charcoal transition">
+                          {compProduct?.name || "Included Component Piece"}
+                        </p>
+                      </div>
+                      <p className="text-[11px] text-muted-foreground pl-5">
+                        SKU: {compProduct?.sku || "SKU-N/A"} · Single: {formatINR(compProduct?.price || 0)}
+                      </p>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <span className="inline-block rounded-md bg-accent px-2 py-0.5 text-xs font-semibold text-charcoal">
+                        Qty: {component.quantity}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+
+                {/* Complimentary Perk */}
+                <div className="flex items-center gap-2 rounded-lg bg-emerald-50/70 border border-emerald-200/80 px-3 py-2 text-xs text-emerald-800">
+                  <Check className="h-4 w-4 text-emerald-600 shrink-0" />
+                  <span className="font-medium">
+                    Complimentary Signature Velvet Jewellery Pouch & Certificate of Authenticity
+                  </span>
+                </div>
+              </div>
+
+              {/* Automatic Pricing Summary Cards */}
+              <div className="pt-2 grid grid-cols-2 sm:grid-cols-4 gap-2 text-center text-xs">
+                <div className="bg-background/80 rounded-lg p-2 border border-border/60">
+                  <span className="text-[10px] text-muted-foreground uppercase tracking-wide block">Individual Total</span>
+                  <span className="font-semibold text-foreground text-sm">{formatINR(individualTotal || product.mrp)}</span>
+                </div>
+                <div className="bg-background/80 rounded-lg p-2 border border-border/60">
+                  <span className="text-[10px] text-muted-foreground uppercase tracking-wide block">Total MRP</span>
+                  <span className="font-medium line-through text-muted-foreground text-sm">{formatINR(product.mrp)}</span>
+                </div>
+                <div className="bg-champagne/25 rounded-lg p-2 border border-champagne/50">
+                  <span className="text-[10px] text-charcoal font-bold uppercase tracking-wide block">Combo Price</span>
+                  <span className="font-bold text-charcoal text-sm">{formatINR(product.price)}</span>
+                </div>
+                <div className="bg-emerald-50 rounded-lg p-2 border border-emerald-300">
+                  <span className="text-[10px] text-emerald-800 font-bold uppercase tracking-wide block">You Save</span>
+                  <span className="font-bold text-emerald-700 text-sm">
+                    {formatINR(Math.max(0, (individualTotal || product.mrp) - product.price))}
+                    {pct > 0 && ` (${pct}%)`}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Colors */}
           <div className="mt-6">
@@ -291,21 +415,21 @@ export function ProductView() {
               </button>
             </div>
             {lowStock && (
-              <p className="mt-2 text-xs text-amber-600">Hurry, only {product.stock} left in stock!</p>
+              <p className="mt-2 text-xs text-amber-600 font-medium">Hurry, only {effectiveStock} left in stock!</p>
             )}
             {outOfStock && (
-              <p className="mt-2 text-xs text-red-600">Currently out of stock. Notify me when available.</p>
+              <p className="mt-2 text-xs text-red-600 font-medium">Currently out of stock. Dependent on component product inventory.</p>
             )}
           </div>
 
           {/* Actions */}
-          <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+          <div className="mt-6 flex flex-col gap-2.5 sm:flex-row sm:items-center">
             <Button
               onClick={handleAddToCart}
               disabled={outOfStock}
               size="lg"
               variant="outline"
-              className="flex-1 border-charcoal text-charcoal hover:bg-charcoal hover:text-ivory disabled:opacity-40"
+              className="flex-1 h-12 text-sm font-semibold border-charcoal text-charcoal hover:bg-charcoal hover:text-ivory disabled:opacity-40"
             >
               <ShoppingBag className="mr-2 h-4 w-4" /> Add to Cart
             </Button>
@@ -313,22 +437,26 @@ export function ProductView() {
               onClick={handleBuyNow}
               disabled={outOfStock}
               size="lg"
-              className="flex-1 bg-charcoal text-ivory hover:bg-charcoal/90 disabled:opacity-40"
+              className="flex-1 h-12 text-sm font-semibold bg-charcoal text-ivory hover:bg-charcoal/90 disabled:opacity-40"
             >
               Buy Now
             </Button>
-            <Button
-              onClick={() => toggleWishlist(product.id)}
-              size="lg"
-              variant="outline"
-              className="px-3"
-              aria-label="Toggle wishlist"
-            >
-              <Heart className={cn("h-5 w-5", isWishlisted && "fill-red-500 text-red-500")} />
-            </Button>
-            <Button onClick={share} size="lg" variant="outline" className="px-3" aria-label="Share">
-              <Share2 className="h-5 w-5" />
-            </Button>
+            <div className="flex gap-2 self-stretch sm:self-auto">
+              <Button
+                onClick={() => toggleWishlist(product.id)}
+                size="lg"
+                variant="outline"
+                className="flex-1 sm:flex-none h-12 px-4"
+                aria-label="Toggle wishlist"
+              >
+                <Heart className={cn("h-5 w-5", isWishlisted && "fill-red-500 text-red-500")} />
+                <span className="sm:hidden ml-1.5 text-xs">Wishlist</span>
+              </Button>
+              <Button onClick={share} size="lg" variant="outline" className="flex-1 sm:flex-none h-12 px-4" aria-label="Share">
+                <Share2 className="h-5 w-5" />
+                <span className="sm:hidden ml-1.5 text-xs">Share</span>
+              </Button>
+            </div>
           </div>
 
           {/* Pincode check */}

@@ -85,8 +85,10 @@ export function ShopView() {
     }
   }, [params.category, params.filter, params.collection, params.q]);
 
+  const storeProducts = useStore((s) => s.products || allProducts);
+
   const filtered = useMemo(() => {
-    let list = [...allProducts];
+    let list = [...storeProducts];
 
     if (queryParam) {
       const q = queryParam.toLowerCase();
@@ -95,7 +97,8 @@ export function ShopView() {
           p.name.toLowerCase().includes(q) ||
           p.tags.some((t) => t.includes(q)) ||
           p.collection.toLowerCase().includes(q) ||
-          p.category.includes(q)
+          p.category.includes(q) ||
+          (p.productType && p.productType.includes(q))
       );
     }
     if (selectedCats.length) list = list.filter((p) => selectedCats.includes(p.category));
@@ -107,7 +110,7 @@ export function ShopView() {
     if (onlyNew) list = list.filter((p) => p.newArrival);
     if (onlyBest) list = list.filter((p) => p.bestseller);
     if (onlyDiscount) list = list.filter((p) => p.mrp > p.price);
-    if (onlyInStock) list = list.filter((p) => p.stock > 0);
+    if (onlyInStock) list = list.filter((p) => (p.productType === "combo" ? p.stock > 0 : p.stock > 0));
 
     switch (sort) {
       case "newest":
@@ -319,27 +322,27 @@ export function ShopView() {
         {/* Products */}
         <div className="flex-1 min-w-0">
           {/* Toolbar */}
-          <div className="mb-5 flex items-center justify-between gap-3">
+          <div className="mb-4 sm:mb-5 flex items-center justify-between gap-2 sm:gap-3 flex-wrap">
             <Sheet open={mobileFiltersOpen} onOpenChange={setMobileFiltersOpen}>
               <SheetTrigger asChild>
-                <Button variant="outline" size="sm" className="lg:hidden">
-                  <SlidersHorizontal className="mr-2 h-4 w-4" /> Filters
+                <Button variant="outline" size="sm" className="lg:hidden h-9 text-xs sm:text-sm gap-1.5 shrink-0">
+                  <SlidersHorizontal className="h-4 w-4" /> Filters
                   {activeFiltersCount > 0 && (
-                    <span className="ml-1.5 rounded-full bg-charcoal px-1.5 text-[10px] text-ivory">
+                    <span className="ml-1 rounded-full bg-charcoal px-1.5 py-0.2 text-[10px] text-ivory font-bold">
                       {activeFiltersCount}
                     </span>
                   )}
                 </Button>
               </SheetTrigger>
-              <SheetContent side="left" className="w-[85%] max-w-sm overflow-y-auto">
+              <SheetContent side="left" className="w-[85vw] max-w-sm overflow-y-auto scroll-area-custom p-4 sm:p-6">
                 <SheetHeader>
-                  <SheetTitle>Filters</SheetTitle>
+                  <SheetTitle className="font-serif text-lg">Filters</SheetTitle>
                 </SheetHeader>
-                <div className="mt-4 px-1 pb-8">{FilterPanel}</div>
+                <div className="mt-4 pb-8">{FilterPanel}</div>
               </SheetContent>
             </Sheet>
 
-            <div className="hidden lg:flex flex-wrap items-center gap-2">
+            <div className="hidden lg:flex flex-wrap items-center gap-1.5">
               {selectedCats.map((c) => (
                 <ActiveChip key={c} label={getCategory(c)?.name || c} onRemove={() => setSelectedCats((p) => p.filter((x) => x !== c))} />
               ))}
@@ -355,15 +358,15 @@ export function ShopView() {
               {onlyInStock && <ActiveChip label="In stock" onRemove={() => setOnlyInStock(false)} />}
             </div>
 
-            <div className="ml-auto flex items-center gap-2">
-              <span className="hidden sm:inline text-xs text-muted-foreground">Sort by</span>
+            <div className="ml-auto flex items-center gap-1.5 sm:gap-2">
+              <span className="hidden sm:inline text-xs text-muted-foreground whitespace-nowrap">Sort by</span>
               <Select value={sort} onValueChange={setSort}>
-                <SelectTrigger className="h-9 w-[180px] text-sm">
+                <SelectTrigger className="h-9 w-36 sm:w-44 text-xs sm:text-sm">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   {sortOptions.map((o) => (
-                    <SelectItem key={o.value} value={o.value}>
+                    <SelectItem key={o.value} value={o.value} className="text-xs sm:text-sm">
                       {o.label}
                     </SelectItem>
                   ))}
@@ -372,19 +375,41 @@ export function ShopView() {
             </div>
           </div>
 
+          {/* Mobile active filter chips */}
+          {activeFiltersCount > 0 && (
+            <div className="lg:hidden flex flex-wrap items-center gap-1.5 mb-4 pb-2 border-b border-border/60">
+              {selectedCats.map((c) => (
+                <ActiveChip key={c} label={getCategory(c)?.name || c} onRemove={() => setSelectedCats((p) => p.filter((x) => x !== c))} />
+              ))}
+              {selectedCollection && (
+                <ActiveChip label={selectedCollection} onRemove={() => setSelectedCollection("")} />
+              )}
+              {selectedColors.map((c) => (
+                <ActiveChip key={c} label={allColors.find((x) => x.id === c)?.name || c} onRemove={() => setSelectedColors((p) => p.filter((x) => x !== c))} />
+              ))}
+              {onlyNew && <ActiveChip label="New" onRemove={() => setOnlyNew(false)} />}
+              {onlyBest && <ActiveChip label="Bestseller" onRemove={() => setOnlyBest(false)} />}
+              {onlyDiscount && <ActiveChip label="On sale" onRemove={() => setOnlyDiscount(false)} />}
+              {onlyInStock && <ActiveChip label="In stock" onRemove={() => setOnlyInStock(false)} />}
+              <button onClick={clearAll} className="text-xs text-muted-foreground underline ml-1">
+                Clear all
+              </button>
+            </div>
+          )}
+
           {/* Grid */}
           {filtered.length === 0 ? (
-            <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border py-20 text-center">
+            <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border py-16 sm:py-20 text-center px-4">
               <p className="font-serif text-2xl">No pieces found</p>
-              <p className="mt-2 text-sm text-muted-foreground">
-                Try adjusting your filters or search.
+              <p className="mt-2 text-sm text-muted-foreground max-w-sm">
+                Try adjusting your filters, price range, or search keywords.
               </p>
               <Button onClick={clearAll} className="mt-4 bg-charcoal text-ivory hover:bg-charcoal/90">
                 Reset filters
               </Button>
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4">
+            <div className="grid grid-cols-2 gap-3 sm:gap-4 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4">
               {filtered.map((p) => (
                 <ProductCard key={p.id} product={p} />
               ))}

@@ -1,8 +1,9 @@
 "use client";
 
+import { useMemo } from "react";
 import { useStore } from "@/store/useStore";
 import { categories } from "@/data/categories";
-import { getBestsellers, getNewArrivals, getFeatured, collections } from "@/data/products";
+import { collections, products as allProducts } from "@/data/products";
 import { ProductCard } from "@/components/product/ProductCard";
 import { Star, ArrowRight, Truck, ShieldCheck, RotateCcw, Sparkles, Quote } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -12,9 +13,10 @@ import { EditorialHero } from "@/components/home/EditorialHero";
 export function HomeView() {
   const navigate = useStore((s) => s.navigate);
   const pushToast = useStore((s) => s.pushToast);
-  const bestsellers = getBestsellers();
-  const newArrivals = getNewArrivals();
-  const featured = getFeatured();
+  const allProductsList = useStore((s) => s.products || allProducts);
+  const bestsellers = useMemo(() => allProductsList.filter((p) => p.bestseller), [allProductsList]);
+  const newArrivals = useMemo(() => allProductsList.filter((p) => p.newArrival), [allProductsList]);
+  const featured = useMemo(() => allProductsList.filter((p) => p.featured), [allProductsList]);
 
   return (
     <div className="animate-fade-up">
@@ -23,7 +25,7 @@ export function HomeView() {
 
       {/* Trust strip with working interactive buttons */}
       <section className="border-y border-border bg-background">
-        <div className="mx-auto grid max-w-7xl grid-cols-2 gap-4 px-6 py-6 md:grid-cols-4">
+        <div className="mx-auto grid max-w-7xl grid-cols-2 gap-2.5 sm:gap-4 px-4 sm:px-6 lg:px-8 py-5 sm:py-6 md:grid-cols-4">
           {[
             {
               icon: Truck,
@@ -75,14 +77,14 @@ export function HomeView() {
       </section>
 
       {/* Shop by Category */}
-      <section className="mx-auto max-w-7xl px-6 py-14">
+      <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10 sm:py-14">
         <SectionHeader
           eyebrow="Curated edits"
           title="Shop by category"
           onAction={() => navigate("shop")}
           actionLabel="View all"
         />
-        <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+        <div className="mt-6 sm:mt-8 grid grid-cols-2 gap-3 sm:gap-4 sm:grid-cols-3 lg:grid-cols-4">
           {categories.slice(0, 8).map((c) => (
             <button
               key={c.id}
@@ -110,14 +112,14 @@ export function HomeView() {
 
       {/* New Arrivals */}
       <section className="bg-accent/40 border-y border-border/50">
-        <div className="mx-auto max-w-7xl px-6 py-14">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10 sm:py-14">
           <SectionHeader
             eyebrow="Just landed"
             title="New arrivals"
             onAction={() => navigate("shop", { filter: "new" })}
             actionLabel="Shop all new"
           />
-          <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+          <div className="mt-6 sm:mt-8 grid grid-cols-2 gap-3 sm:gap-4 sm:grid-cols-3 lg:grid-cols-4">
             {newArrivals.slice(0, 4).map((p) => (
               <ProductCard key={p.id} product={p} />
             ))}
@@ -126,17 +128,17 @@ export function HomeView() {
       </section>
 
       {/* Promo banner with copyable coupon code */}
-      <section className="mx-auto max-w-7xl px-6 py-14">
+      <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10 sm:py-14">
         <div className="relative overflow-hidden rounded-2xl bg-[#141312] text-ivory border border-white/10 shadow-2xl">
           <div className="grid lg:grid-cols-2 items-center">
-            <div className="p-8 sm:p-12 lg:p-16">
+            <div className="p-6 sm:p-10 lg:p-16">
               <span className="inline-flex items-center gap-1.5 rounded-full border border-champagne/40 bg-champagne/10 px-3 py-1 text-xs uppercase tracking-[0.25em] text-champagne font-medium">
                 <Sparkles className="h-3 w-3" /> Limited time privilege
               </span>
-              <h2 className="mt-4 font-serif text-3xl sm:text-4xl lg:text-5xl leading-tight text-ivory">
+              <h2 className="mt-4 font-serif text-2xl sm:text-4xl lg:text-5xl leading-tight text-ivory">
                 Flat 20% off the <span className="text-champagne italic">Noir Haute Collection</span>
               </h2>
-              <p className="mt-4 max-w-md text-sm text-ivory/75 leading-relaxed">
+              <p className="mt-3 sm:mt-4 max-w-md text-xs sm:text-sm text-ivory/75 leading-relaxed">
                 Opulent statement pieces with antique gold settings, handcrafted kundan, and brilliant crystal faceting.
               </p>
 
@@ -164,23 +166,23 @@ export function HomeView() {
                 </button>
               </div>
 
-              <div className="mt-6 flex flex-wrap gap-3">
+              <div className="mt-6 flex flex-col sm:flex-row flex-wrap gap-3">
                 <Button
                   onClick={() => navigate("shop", { collection: "noir" })}
-                  className="bg-champagne text-charcoal hover:brightness-110 font-semibold px-6 py-5 text-sm uppercase tracking-wider shadow-lg shadow-champagne/20"
+                  className="bg-champagne text-charcoal hover:brightness-110 font-semibold px-6 py-5 text-xs sm:text-sm uppercase tracking-wider shadow-lg shadow-champagne/20"
                 >
                   Shop the Noir Edit <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
                 <Button
                   onClick={() => navigate("shop", { filter: "collections" })}
                   variant="outline"
-                  className="border-white/20 bg-white/5 text-ivory hover:border-champagne hover:bg-champagne/10 hover:text-champagne px-6 py-5 text-sm uppercase tracking-wider"
+                  className="border-white/20 bg-white/5 text-ivory hover:border-champagne hover:bg-champagne/10 hover:text-champagne px-6 py-5 text-xs sm:text-sm uppercase tracking-wider"
                 >
                   All Collections
                 </Button>
               </div>
             </div>
-            <div className="relative min-h-[300px] lg:min-h-[460px]">
+            <div className="relative min-h-[220px] sm:min-h-[300px] lg:min-h-[460px]">
               <img
                 src="https://images.unsplash.com/photo-1535632787350-4e68ef0ac584?auto=format&fit=crop&w=1200&q=80"
                 alt="Noir collection"
@@ -193,14 +195,14 @@ export function HomeView() {
       </section>
 
       {/* Bestsellers */}
-      <section className="mx-auto max-w-7xl px-6 pb-14">
+      <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pb-10 sm:pb-14">
         <SectionHeader
           eyebrow="Loved by all"
           title="Bestsellers"
           onAction={() => navigate("shop", { filter: "best" })}
           actionLabel="View all"
         />
-        <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+        <div className="mt-6 sm:mt-8 grid grid-cols-2 gap-3 sm:gap-4 sm:grid-cols-3 lg:grid-cols-4">
           {bestsellers.slice(0, 4).map((p) => (
             <ProductCard key={p.id} product={p} />
           ))}
@@ -208,7 +210,7 @@ export function HomeView() {
       </section>
 
       {/* Featured collection */}
-      <section className="mx-auto max-w-7xl px-6 py-14">
+      <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10 sm:py-14">
         <SectionHeader
           eyebrow="Featured"
           title="Explore our collections"
@@ -245,14 +247,14 @@ export function HomeView() {
       {/* Featured products with functional header action */}
       {featured.length > 0 && (
         <section className="bg-accent/40 border-y border-border/50">
-          <div className="mx-auto max-w-7xl px-6 py-14">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10 sm:py-14">
             <SectionHeader
               eyebrow="Editor's pick"
               title="Featured pieces"
               onAction={() => navigate("shop", { filter: "featured" })}
               actionLabel="View all featured"
             />
-            <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+            <div className="mt-6 sm:mt-8 grid grid-cols-2 gap-3 sm:gap-4 sm:grid-cols-3 lg:grid-cols-4">
               {featured.slice(0, 4).map((p) => (
                 <ProductCard key={p.id} product={p} />
               ))}
@@ -262,9 +264,9 @@ export function HomeView() {
       )}
 
       {/* Testimonials */}
-      <section className="mx-auto max-w-7xl px-6 py-14">
+      <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10 sm:py-14">
         <SectionHeader eyebrow="Loved by customers" title="What they're saying" />
-        <div className="mt-8 grid gap-5 md:grid-cols-3">
+        <div className="mt-6 sm:mt-8 grid gap-4 sm:gap-5 sm:grid-cols-2 md:grid-cols-3">
           {[
             {
               name: "Priya Sharma",
@@ -400,19 +402,19 @@ function SectionHeader({
   onAction?: () => void;
 }) {
   return (
-    <div className="flex items-end justify-between gap-4">
-      <div>
+    <div className="flex items-end justify-between gap-3">
+      <div className="min-w-0">
         {eyebrow && (
-          <p className="text-xs uppercase tracking-[0.25em] text-champagne">{eyebrow}</p>
+          <p className="text-[10px] sm:text-xs uppercase tracking-[0.2em] sm:tracking-[0.25em] text-champagne font-medium">{eyebrow}</p>
         )}
-        <h2 className="mt-1 font-serif text-2xl sm:text-3xl">{title}</h2>
+        <h2 className="mt-0.5 sm:mt-1 font-serif text-xl sm:text-2xl md:text-3xl text-foreground truncate">{title}</h2>
       </div>
       {actionLabel && (
         <button
           onClick={onAction}
-          className="inline-flex shrink-0 items-center gap-1 text-sm text-charcoal hover:gap-2 transition-all"
+          className="inline-flex shrink-0 items-center gap-1 text-xs sm:text-sm font-medium text-charcoal hover:gap-1.5 transition-all"
         >
-          {actionLabel} <ArrowRight className="h-4 w-4" />
+          {actionLabel} <ArrowRight className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
         </button>
       )}
     </div>

@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { useStore, formatINR } from "@/store/useStore";
-import { getProduct } from "@/data/products";
+import { getProduct, products as allProducts } from "@/data/products";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,6 +21,7 @@ import {
   Loader2,
   Smartphone,
   Banknote,
+  Layers,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Address, PaymentMethod } from "@/lib/types";
@@ -42,6 +43,7 @@ export function CheckoutView() {
   const addresses = useStore((s) => s.addresses);
   const user = useStore((s) => s.user);
   const placeOrder = useStore((s) => s.placeOrder);
+  const allProductsList = useStore((s) => s.products || allProducts);
 
   const [step, setStep] = useState(1);
   const [contact, setContact] = useState({
@@ -55,7 +57,12 @@ export function CheckoutView() {
   const [payment, setPayment] = useState<PaymentMethod>("card");
   const [processing, setProcessing] = useState(false);
 
-  const items = cartItems.map((i) => ({ item: i, product: getProduct(i.productId) })).filter((x) => x.product);
+  const items = cartItems
+    .map((i) => ({
+      item: i,
+      product: allProductsList.find((p) => p.id === i.productId) || getProduct(i.productId),
+    }))
+    .filter((x) => x.product);
   const subtotal = items.reduce((s, x) => s + x.product!.price * x.item.qty, 0);
   const shipping = delivery === "express" ? 149 : subtotal >= 999 ? 0 : 79;
   const tax = Math.round(subtotal * 0.03);

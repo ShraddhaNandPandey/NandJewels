@@ -92,10 +92,10 @@ export function Header() {
 
       {/* Main header */}
       <div className="border-b border-border bg-background/90 backdrop-blur supports-[backdrop-filter]:bg-background/70">
-        <div className="mx-auto flex h-16 max-w-7xl items-center gap-4 px-4 sm:px-6">
+        <div className="mx-auto flex h-16 max-w-7xl items-center gap-2 sm:gap-4 px-3 sm:px-6 lg:px-8">
           {/* Mobile menu button */}
           <button
-            className="lg:hidden -ml-1 p-1.5 text-foreground"
+            className="lg:hidden p-2 -ml-1 text-foreground flex items-center justify-center min-h-[44px] min-w-[44px] rounded-lg hover:bg-accent/60 transition"
             onClick={() => setMobileMenuOpen(true)}
             aria-label="Open menu"
           >
@@ -105,30 +105,30 @@ export function Header() {
           {/* Brand logo */}
           <button
             onClick={() => navigate("home")}
-            className="flex items-center gap-3 shrink-0 group text-left"
+            className="flex items-center gap-2 sm:gap-3 shrink-0 group text-left min-w-0"
             aria-label="श्रद्धानंद (Shraddhanand) home"
           >
             <img
               src="/logo.svg"
               alt="श्रद्धानंद"
               aria-hidden="true"
-              className="h-10 w-10 object-contain transition-transform duration-300 group-hover:scale-105"
+              className="h-8 w-8 sm:h-10 sm:w-10 object-contain transition-transform duration-300 group-hover:scale-105 shrink-0"
             />
-            <div className="flex flex-col">
-              <span className="font-serif text-2xl font-bold tracking-tight text-foreground leading-none">
+            <div className="flex flex-col min-w-0">
+              <span className="font-serif text-lg sm:text-2xl font-bold tracking-tight text-foreground leading-none truncate">
                 श्रद्धानंद
               </span>
-              <span className="text-[10px] uppercase tracking-[0.25em] text-champagne font-medium mt-0.5">
-                Shraddhanand <span className="text-[9px] text-muted-foreground font-normal tracking-[0.18em]">Jewellery</span>
+              <span className="text-[9px] sm:text-[10px] uppercase tracking-[0.18em] sm:tracking-[0.25em] text-champagne font-medium mt-0.5 whitespace-nowrap">
+                Shraddhanand <span className="hidden min-[420px]:inline text-[9px] text-muted-foreground font-normal tracking-[0.15em]">Jewellery</span>
               </span>
             </div>
           </button>
 
           {/* Desktop nav */}
-          <nav className="hidden lg:flex items-center gap-7 ml-6 text-sm">
+          <nav className="hidden lg:flex items-center gap-4 xl:gap-7 ml-4 xl:ml-6 text-sm">
             <button
               onClick={() => setShowCats((prev) => !prev)}
-              className="inline-flex items-center gap-1 link-underline text-foreground/80 hover:text-foreground font-medium"
+              className="inline-flex items-center gap-1 link-underline text-foreground/80 hover:text-foreground font-medium whitespace-nowrap"
               onMouseEnter={() => setShowCats(true)}
             >
               Categories
@@ -139,7 +139,7 @@ export function Header() {
                 key={item.label}
                 onClick={() => navigate(item.view, item.params)}
                 className={cn(
-                  "link-underline transition",
+                  "link-underline transition whitespace-nowrap",
                   view === item.view ? "text-foreground font-medium" : "text-foreground/70 hover:text-foreground"
                 )}
               >
@@ -148,17 +148,17 @@ export function Header() {
             ))}
             <button
               onClick={() => navigate("admin")}
-              className="link-underline text-foreground/40 hover:text-foreground text-xs uppercase tracking-wider"
+              className="link-underline text-foreground/40 hover:text-foreground text-xs uppercase tracking-wider whitespace-nowrap"
             >
               Admin
             </button>
           </nav>
 
           {/* Right actions */}
-          <div className="ml-auto flex items-center gap-1 sm:gap-2">
+          <div className="ml-auto flex items-center gap-0.5 sm:gap-1.5 shrink-0">
             <button
               onClick={() => setSearchOpen(true)}
-              className="p-2 text-foreground/80 hover:text-foreground transition"
+              className="flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-full text-foreground/80 hover:text-foreground hover:bg-accent/60 transition"
               aria-label="Search"
             >
               <Search className="h-5 w-5" />
@@ -166,12 +166,12 @@ export function Header() {
 
             <button
               onClick={() => navigate("notifications")}
-              className="relative hidden sm:block p-2 text-foreground/80 hover:text-foreground transition"
+              className="relative hidden sm:flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-full text-foreground/80 hover:text-foreground hover:bg-accent/60 transition"
               aria-label="Notifications"
             >
               <Bell className="h-5 w-5" />
               {unread > 0 && (
-                <span className="absolute top-1 right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-champagne px-1 text-[10px] font-semibold text-charcoal">
+                <span className="absolute top-1.5 right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-champagne px-1 text-[10px] font-semibold text-charcoal">
                   {unread}
                 </span>
               )}
@@ -179,12 +179,12 @@ export function Header() {
 
             <button
               onClick={() => navigate("wishlist")}
-              className="relative p-2 text-foreground/80 hover:text-foreground transition"
+              className="relative hidden min-[360px]:flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-full text-foreground/80 hover:text-foreground hover:bg-accent/60 transition"
               aria-label="Wishlist"
             >
               <Heart className="h-5 w-5" />
               {wishlistCount > 0 && (
-                <span className="absolute top-1 right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-charcoal px-1 text-[10px] font-semibold text-ivory">
+                <span className="absolute top-1.5 right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-charcoal px-1 text-[10px] font-semibold text-ivory">
                   {wishlistCount}
                 </span>
               )}
@@ -194,7 +194,7 @@ export function Header() {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
-                  className="p-2 text-foreground/80 hover:text-foreground transition"
+                  className="flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-full text-foreground/80 hover:text-foreground hover:bg-accent/60 transition"
                   aria-label="Account"
                 >
                   <User className="h-5 w-5" />
@@ -236,12 +236,12 @@ export function Header() {
 
             <button
               onClick={() => navigate("cart")}
-              className="relative p-2 text-foreground/80 hover:text-foreground transition"
+              className="relative flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-full text-foreground/80 hover:text-foreground hover:bg-accent/60 transition"
               aria-label="Cart"
             >
               <ShoppingBag className="h-5 w-5" />
               {cartCount > 0 && (
-                <span className="absolute top-1 right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-champagne px-1 text-[10px] font-semibold text-charcoal">
+                <span className="absolute top-1.5 right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-champagne px-1 text-[10px] font-semibold text-charcoal">
                   {cartCount}
                 </span>
               )}

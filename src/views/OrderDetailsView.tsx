@@ -17,6 +17,8 @@ import {
   RotateCcw,
   MessageCircle,
   Clock,
+  Layers,
+  Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -165,20 +167,48 @@ export function OrderDetailsView() {
             <h2 className="font-serif text-xl flex items-center gap-2"><Package className="h-5 w-5 text-charcoal" /> Items in order</h2>
             <div className="mt-4 space-y-3">
               {order.items.map((i) => (
-                <div key={`${i.productId}-${i.colorId}`} className="flex items-center gap-3 rounded-lg border border-border p-3">
-                  <button onClick={() => navigate("product", { id: i.productId })}>
-                    <img src={i.image} alt={i.name} className="h-16 w-16 rounded object-cover" />
-                  </button>
-                  <div className="flex-1">
-                    <button onClick={() => navigate("product", { id: i.productId })} className="text-left text-sm font-medium hover:text-charcoal">{i.name}</button>
-                    <p className="text-xs text-muted-foreground">{i.colorName}{i.size && ` · ${i.size}`} · Qty {i.qty}</p>
-                    {canReturn && (
-                      <Button size="sm" variant="link" className="h-auto px-0 text-xs text-charcoal" onClick={() => setReturnOpen(true)}>
-                        Return this item
-                      </Button>
-                    )}
+                <div key={`${i.productId}-${i.colorId}`} className="flex flex-col gap-2 rounded-lg border border-border p-3">
+                  <div className="flex items-center gap-3">
+                    <button onClick={() => navigate("product", { id: i.productId })}>
+                      <img src={i.image} alt={i.name} className="h-16 w-16 rounded object-cover border border-border shrink-0" />
+                    </button>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <button onClick={() => navigate("product", { id: i.productId })} className="text-left text-sm font-medium hover:text-charcoal truncate">
+                          {i.name}
+                        </button>
+                        {i.isCombo && (
+                          <span className="rounded bg-amber-800 text-amber-50 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider inline-flex items-center gap-1">
+                            <Layers className="h-2.5 w-2.5" /> Combo
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground">{i.colorName}{i.size && ` · ${i.size}`} · Qty {i.qty}</p>
+                      {canReturn && (
+                        <Button size="sm" variant="link" className="h-auto px-0 text-xs text-charcoal" onClick={() => setReturnOpen(true)}>
+                          Return this item
+                        </Button>
+                      )}
+                    </div>
+                    <p className="text-sm font-semibold">{formatINR(i.price * i.qty)}</p>
                   </div>
-                  <p className="text-sm font-semibold">{formatINR(i.price * i.qty)}</p>
+
+                  {/* Components Snapshot for Combo */}
+                  {i.isCombo && i.comboComponents && i.comboComponents.length > 0 && (
+                    <div className="mt-1 rounded-md bg-accent/40 p-2.5 text-xs border border-border/60">
+                      <p className="font-semibold text-charcoal text-[11px] flex items-center gap-1 mb-1">
+                        <Sparkles className="h-3 w-3 text-champagne" /> Components:
+                      </p>
+                      <div className="space-y-1">
+                        {i.comboComponents.map((c, cIdx) => (
+                          <div key={cIdx} className="flex items-center justify-between text-[11px] text-muted-foreground pl-2">
+                            <span>• {c.qty} × {c.name}</span>
+                            <span className="font-mono text-[10px] text-foreground/70">{c.sku}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

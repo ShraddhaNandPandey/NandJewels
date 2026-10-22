@@ -71,14 +71,14 @@ export function Footer() {
     <footer className="mt-auto border-t border-border bg-charcoal text-ivory/80">
       {/* Newsletter */}
       <div className="border-b border-white/10">
-        <div className="mx-auto flex max-w-7xl flex-col gap-6 px-6 py-10 md:flex-row md:items-center md:justify-between">
+        <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 sm:px-6 lg:px-8 py-8 sm:py-10 md:flex-row md:items-center md:justify-between">
           <div className="max-w-md">
             <h3 className="font-serif text-2xl text-ivory">Join the Shraddhanand circle</h3>
             <p className="mt-1 text-sm text-ivory/60">
               Early access to new collections, private sales and styling notes — straight to your inbox.
             </p>
           </div>
-          <form onSubmit={subscribe} className="flex w-full max-w-md gap-2">
+          <form onSubmit={subscribe} className="flex flex-col sm:flex-row w-full max-w-md gap-2.5">
             <input
               type="email"
               value={email}
@@ -88,7 +88,7 @@ export function Footer() {
             />
             <button
               type="submit"
-              className="inline-flex h-11 items-center gap-2 rounded-md bg-champagne px-5 text-sm font-medium text-charcoal transition hover:brightness-105 cursor-pointer"
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-md bg-champagne px-5 text-sm font-medium text-charcoal transition hover:brightness-105 cursor-pointer shrink-0"
             >
               <Send className="h-4 w-4" /> Subscribe
             </button>
@@ -97,7 +97,7 @@ export function Footer() {
       </div>
 
       {/* Links */}
-      <div className="mx-auto grid max-w-7xl grid-cols-2 gap-8 px-6 py-12 md:grid-cols-4 lg:grid-cols-5">
+      <div className="mx-auto grid max-w-7xl grid-cols-2 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-8 px-4 sm:px-6 lg:px-8 py-10 sm:py-12">
         <div className="col-span-2 lg:col-span-1">
           <button
             onClick={() => navigate("home")}

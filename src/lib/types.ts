@@ -52,6 +52,14 @@ export interface Review {
   productId?: string;
 }
 
+export type ProductType = "single" | "combo";
+
+export interface ComboComponent {
+  componentProductId: string;
+  componentVariantId?: string;
+  quantity: number;
+}
+
 export interface Product {
   id: string;
   sku: string;
@@ -79,6 +87,9 @@ export interface Product {
   bestseller: boolean;
   newArrival: boolean;
   featured: boolean;
+  productType?: ProductType;
+  comboComponents?: ComboComponent[];
+  status?: "active" | "draft";
 }
 
 export type ProductBadge =
@@ -86,7 +97,8 @@ export type ProductBadge =
   | "bestseller"
   | "sale"
   | "low-stock"
-  | "out-of-stock";
+  | "out-of-stock"
+  | "combo";
 
 export interface CartItem {
   productId: string;
@@ -125,6 +137,15 @@ export type OrderStatus =
 export type PaymentMethod = "card" | "upi" | "cod" | "wallet";
 export type PaymentStatus = "paid" | "pending" | "failed" | "refunded";
 
+export interface OrderItemComponentSnapshot {
+  productId: string;
+  name: string;
+  sku: string;
+  image: string;
+  qty: number;
+  price: number;
+}
+
 export interface OrderItemSnapshot {
   productId: string;
   name: string;
@@ -134,6 +155,8 @@ export interface OrderItemSnapshot {
   colorId: string;
   colorName: string;
   size?: string;
+  isCombo?: boolean;
+  comboComponents?: OrderItemComponentSnapshot[];
 }
 
 export interface OrderTimelineEvent {

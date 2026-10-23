@@ -166,10 +166,12 @@ export function ReelForm({
             </span>
           </div>
           <DialogTitle className="font-serif text-xl sm:text-2xl font-bold">
-            {reelToEdit ? "Edit Instagram Reel" : "Add New Instagram Reel"}
+            {targetReel ? "Edit Instagram Reel" : "Add New Instagram Reel"}
           </DialogTitle>
           <DialogDescription className="text-xs text-muted-foreground">
-            Configure the video, poster, caption, and linked VRUNDORA jewellery pieces.
+            {targetReel
+              ? `Editing "${targetReel.title}". Update any details below to fix mistakes, then click Save Changes.`
+              : "Configure the video, poster, caption, and linked VRUNDORA jewellery pieces."}
           </DialogDescription>
         </DialogHeader>
 

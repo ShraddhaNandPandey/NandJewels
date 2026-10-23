@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import Image from "next/image";
-import { X, Play, Pause, Volume2, VolumeX, ExternalLink, Sparkles, Tag, ShoppingBag } from "lucide-react";
+import { X, Play, Pause, Volume2, VolumeX, ExternalLink, Sparkles, Tag, ShoppingBag, Edit2, Trash2 } from "lucide-react";
 import { Reel } from "@/lib/types";
 import { useStore } from "@/store/useStore";
 
@@ -10,9 +10,11 @@ interface ReelPreviewModalProps {
   reel: Reel | null;
   isOpen: boolean;
   onClose: () => void;
+  onEdit?: (reel: Reel) => void;
+  onDelete?: (reel: Reel) => void;
 }
 
-export default function ReelPreviewModal({ reel, isOpen, onClose }: ReelPreviewModalProps) {
+export default function ReelPreviewModal({ reel, isOpen, onClose, onEdit, onDelete }: ReelPreviewModalProps) {
   const products = useStore((s) => s.products);
   const [isPlaying, setIsPlaying] = useState(true);
   const [isMuted, setIsMuted] = useState(false);
@@ -233,6 +235,38 @@ export default function ReelPreviewModal({ reel, isOpen, onClose }: ReelPreviewM
               </div>
             )}
           </div>
+
+          {/* Quick Edit / Delete Toolbar */}
+          {(onEdit || onDelete) && (
+            <div className="flex items-center gap-2 pt-4 mt-4 border-t border-stone-800">
+              {onEdit && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onClose();
+                    onEdit(reel);
+                  }}
+                  className="flex-1 py-2.5 px-4 rounded-xl bg-amber-500 hover:bg-amber-600 text-stone-950 font-semibold text-xs flex items-center justify-center gap-2 transition-all shadow-sm"
+                >
+                  <Edit2 className="w-4 h-4" />
+                  <span>Edit Reel Details</span>
+                </button>
+              )}
+              {onDelete && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onClose();
+                    onDelete(reel);
+                  }}
+                  className="py-2.5 px-4 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/30 font-semibold text-xs flex items-center justify-center gap-1.5 transition-all"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  <span>Delete Reel</span>
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>

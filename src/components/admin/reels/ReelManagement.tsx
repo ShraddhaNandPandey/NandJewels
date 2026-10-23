@@ -383,7 +383,7 @@ export default function ReelManagement() {
 
                       {/* Actions */}
                       <td className="py-3 px-4 text-right pr-6">
-                        <div className="inline-flex items-center gap-1">
+                        <div className="inline-flex items-center gap-1.5 justify-end">
                           <button
                             onClick={() => setPreviewingReel(reel)}
                             className="p-1.5 rounded-lg text-stone-500 hover:text-stone-900 hover:bg-stone-100 transition-colors"
@@ -393,10 +393,11 @@ export default function ReelManagement() {
                           </button>
                           <button
                             onClick={() => handleOpenEdit(reel)}
-                            className="p-1.5 rounded-lg text-stone-500 hover:text-stone-900 hover:bg-stone-100 transition-colors"
-                            title="Edit Reel"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-900 text-xs font-semibold border border-stone-300 transition-all shadow-xs cursor-pointer"
+                            title="Edit Reel Details"
                           >
-                            <Edit2 className="w-4 h-4" />
+                            <Edit2 className="w-3.5 h-3.5 text-amber-700" />
+                            <span>Edit</span>
                           </button>
                           <button
                             onClick={() => duplicateReel(reel.id)}
@@ -407,10 +408,11 @@ export default function ReelManagement() {
                           </button>
                           <button
                             onClick={() => setDeletingReel(reel)}
-                            className="p-1.5 rounded-lg text-stone-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-semibold border border-rose-200 transition-all shadow-xs cursor-pointer"
                             title="Delete Reel"
                           >
-                            <Trash2 className="w-4 h-4" />
+                            <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+                            <span>Delete</span>
                           </button>
                         </div>
                       </td>
@@ -525,34 +527,34 @@ export default function ReelManagement() {
                       </button>
                     </div>
 
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1.5">
                       <button
                         onClick={() => setPreviewingReel(reel)}
-                        className="p-1.5 rounded-lg text-stone-600 hover:bg-stone-100"
+                        className="p-1.5 rounded-lg text-stone-600 hover:bg-stone-100 border border-stone-200"
                         title="Preview"
                       >
-                        <Eye className="w-4 h-4" />
+                        <Eye className="w-3.5 h-3.5" />
                       </button>
                       <button
                         onClick={() => handleOpenEdit(reel)}
-                        className="p-1.5 rounded-lg text-stone-600 hover:bg-stone-100"
-                        title="Edit"
+                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-900 text-xs font-semibold border border-stone-300"
                       >
-                        <Edit2 className="w-4 h-4" />
+                        <Edit2 className="w-3.5 h-3.5 text-amber-700" />
+                        <span>Edit</span>
                       </button>
                       <button
                         onClick={() => duplicateReel(reel.id)}
-                        className="p-1.5 rounded-lg text-stone-600 hover:bg-stone-100"
+                        className="p-1.5 rounded-lg text-stone-600 hover:bg-stone-100 border border-stone-200"
                         title="Duplicate"
                       >
-                        <Copy className="w-4 h-4" />
+                        <Copy className="w-3.5 h-3.5" />
                       </button>
                       <button
                         onClick={() => setDeletingReel(reel)}
-                        className="p-1.5 rounded-lg text-rose-600 hover:bg-rose-50"
-                        title="Delete"
+                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-semibold border border-rose-200"
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+                        <span>Delete</span>
                       </button>
                     </div>
                   </div>
@@ -622,6 +624,14 @@ export default function ReelManagement() {
         reel={previewingReel}
         isOpen={!!previewingReel}
         onClose={() => setPreviewingReel(null)}
+        onEdit={(reel) => {
+          setPreviewingReel(null);
+          handleOpenEdit(reel);
+        }}
+        onDelete={(reel) => {
+          setPreviewingReel(null);
+          setDeletingReel(reel);
+        }}
       />
     </div>
   );

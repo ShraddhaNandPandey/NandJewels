@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import type { Reel } from "@/lib/types";
-import { Play, Volume2, VolumeX, ShoppingBag, Instagram, Sparkles, Film, ExternalLink } from "lucide-react";
+import { Play, Volume2, VolumeX, ShoppingBag, Instagram, Sparkles, Video, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface ReelCardProps {
@@ -19,29 +19,65 @@ export function ReelCard({ reel, isCenter, onOpenViewer, onShopLook }: ReelCardP
   const [videoLoaded, setVideoLoaded] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  const isHosted = reel.mediaType === "hosted" && Boolean(reel.videoUrl);
+  const hasVideo = Boolean(reel.videoUrl && reel.videoUrl.trim().length > 0);
   const hasCover = Boolean(reel.posterUrl && reel.posterUrl.trim().length > 0);
 
-  // Play video ONLY when this card is hosted, has videoUrl, and is centered
+  // Instant Autoplay when this card is in the center position
   useEffect(() => {
     const video = videoRef.current;
-    if (!video || !isHosted) return;
+    if (!video || !hasVideo) return;
+
+    // Strict muted setup to satisfy modern browser autoplay policies (Chrome, Safari, iOS, Brave)
+    video.defaultMuted = true;
+    video.muted = isMuted;
+    video.setAttribute("muted", "");
+    video.setAttribute("playsinline", "");
+    video.setAttribute("autoplay", "");
 
     if (isCenter) {
-      video.muted = isMuted;
-      const playPromise = video.play();
-      if (playPromise !== undefined) {
-        playPromise
-          .then(() => setIsPlaying(true))
-          .catch(() => {
-            setIsPlaying(false);
-          });
+      const playVideo = () => {
+        const promise = video.play();
+        if (promise !== undefined) {
+          promise
+            .then(() => {
+              setIsPlaying(true);
+              setVideoLoaded(true);
+            })
+            .catch(() => {
+              // Browser requires user interaction before unmuting or playing
+              setIsPlaying(false);
+
+              // Auto-retry on first touch/scroll/click gesture
+              const retryAutoplay = () => {
+                video.muted = true;
+                video.play().then(() => {
+                  setIsPlaying(true);
+                  setVideoLoaded(true);
+                }).catch(() => {});
+
+                window.removeEventListener("scroll", retryAutoplay);
+                window.removeEventListener("touchstart", retryAutoplay);
+                window.removeEventListener("click", retryAutoplay);
+              };
+
+              window.addEventListener("scroll", retryAutoplay, { once: true, passive: true });
+              window.addEventListener("touchstart", retryAutoplay, { once: true, passive: true });
+              window.addEventListener("click", retryAutoplay, { once: true });
+            });
+        }
+      };
+
+      if (video.readyState >= 2) {
+        playVideo();
+      } else {
+        video.addEventListener("canplay", playVideo, { once: true });
+        video.addEventListener("loadeddata", playVideo, { once: true });
       }
     } else {
       video.pause();
       setIsPlaying(false);
     }
-  }, [isCenter, isMuted, isHosted]);
+  }, [isCenter, isMuted, hasVideo, reel.videoUrl]);
 
   const toggleMute = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -71,13 +107,12 @@ export function ReelCard({ reel, isCenter, onOpenViewer, onShopLook }: ReelCardP
           loading="lazy"
           className={cn(
             "absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-105",
-            isHosted && isCenter && videoLoaded ? "opacity-0 pointer-events-none" : "opacity-100"
+            hasVideo && isCenter && videoLoaded && isPlaying ? "opacity-0 pointer-events-none" : "opacity-100"
           )}
         />
       ) : (
-        /* Elegant VRUNDORA Fallback Card (Priority 3: Never leave broken image) */
+        /* Elegant VRUNDORA Fallback Card (When no cover photo is uploaded) */
         <div className="absolute inset-0 flex flex-col justify-between p-6 bg-gradient-to-b from-stone-900 via-stone-950 to-black text-ivory text-center">
-          {/* Subtle gold decorative glow */}
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_35%,rgba(201,169,106,0.18),transparent_70%)] pointer-events-none" />
 
           {/* Top Branding */}
@@ -114,19 +149,23 @@ export function ReelCard({ reel, isCenter, onOpenViewer, onShopLook }: ReelCardP
         </div>
       )}
 
-      {/* 2. Video Player: ONLY rendered when hosted, valid videoUrl, and centered */}
-      {isHosted && isCenter && (
+      {/* 2. Video Player: Rendered and actively played when centered */}
+      {hasVideo && isCenter && (
         <video
           ref={videoRef}
           src={reel.videoUrl}
           poster={reel.posterUrl}
           playsInline
           loop
+          autoPlay
           muted={isMuted}
           onLoadedData={() => setVideoLoaded(true)}
+          onCanPlay={() => setVideoLoaded(true)}
+          onPlay={() => setIsPlaying(true)}
+          onPause={() => setIsPlaying(false)}
           className={cn(
-            "absolute inset-0 h-full w-full object-cover transition-opacity duration-500",
-            videoLoaded ? "opacity-100" : "opacity-0"
+            "absolute inset-0 h-full w-full object-cover transition-opacity duration-300",
+            videoLoaded && isPlaying ? "opacity-100" : "opacity-0"
           )}
         />
       )}
@@ -140,18 +179,18 @@ export function ReelCard({ reel, isCenter, onOpenViewer, onShopLook }: ReelCardP
         </span>
 
         <div className="flex items-center gap-1.5">
-          {/* Sound Toggle (Only visible if hosted video is actively loaded) */}
-          {isHosted && isCenter && videoLoaded && (
+          {/* Sound Toggle (Only visible if video is active) */}
+          {hasVideo && isCenter && (
             <button
               onClick={toggleMute}
-              className="flex h-7 w-7 items-center justify-center rounded-full bg-black/60 backdrop-blur-md text-ivory/90 hover:text-champagne transition border border-white/20"
+              className="flex h-7 w-7 items-center justify-center rounded-full bg-black/60 backdrop-blur-md text-ivory/90 hover:text-champagne transition border border-white/20 cursor-pointer"
               aria-label={isMuted ? "Unmute audio" : "Mute audio"}
             >
               {isMuted ? <VolumeX className="h-3.5 w-3.5" /> : <Volume2 className="h-3.5 w-3.5" />}
             </button>
           )}
 
-          {/* Instagram badge */}
+          {/* Instagram link badge */}
           {reel.instagramUrl && (
             <a
               href={reel.instagramUrl}
@@ -168,14 +207,14 @@ export function ReelCard({ reel, isCenter, onOpenViewer, onShopLook }: ReelCardP
         </div>
       </div>
 
-      {/* Center Play Indicator on hover / when not playing */}
-      {(!isHosted || !isCenter || !isPlaying) && (
+      {/* Center Play Indicator on inactive card or before video starts playing */}
+      {(!isCenter || !isPlaying) && (
         <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
           <div className="flex h-12 w-12 items-center justify-center rounded-full bg-charcoal/80 text-champagne backdrop-blur-md border border-champagne/40 transition-transform duration-300 group-hover:scale-110 shadow-lg">
-            {reel.mediaType === "instagram" ? (
-              <Instagram className="h-5 w-5 text-pink-400" />
-            ) : (
+            {hasVideo ? (
               <Play className="h-5 w-5 fill-champagne ml-0.5" />
+            ) : (
+              <Instagram className="h-5 w-5 text-pink-400" />
             )}
           </div>
         </div>
@@ -197,7 +236,7 @@ export function ReelCard({ reel, isCenter, onOpenViewer, onShopLook }: ReelCardP
           {productCount > 0 ? (
             <button
               onClick={(e) => onShopLook(reel, e)}
-              className="inline-flex items-center gap-1.5 rounded-full bg-champagne text-charcoal px-3 py-1 text-[10px] sm:text-xs font-semibold transition hover:brightness-105 active:scale-95 shadow-sm"
+              className="inline-flex items-center gap-1.5 rounded-full bg-champagne text-charcoal px-3 py-1 text-[10px] sm:text-xs font-semibold transition hover:brightness-105 active:scale-95 shadow-sm cursor-pointer"
             >
               <ShoppingBag className="h-3 w-3" />
               <span>Shop Look</span>
@@ -212,7 +251,7 @@ export function ReelCard({ reel, isCenter, onOpenViewer, onShopLook }: ReelCardP
           )}
 
           <span className="text-[10px] text-ivory/70 uppercase tracking-wider font-medium flex items-center gap-1 group-hover:text-champagne transition-colors">
-            {reel.mediaType === "instagram" ? "View Reel ↗" : "Watch ↗"}
+            {hasVideo ? "Watch ↗" : "View Reel ↗"}
           </span>
         </div>
       </div>

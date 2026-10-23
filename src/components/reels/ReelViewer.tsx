@@ -32,7 +32,7 @@ export function ReelViewer({
   onClose,
   onNavigateProduct,
 }: ReelViewerProps) {
-  const isHosted = reel.mediaType === "hosted" && Boolean(reel.videoUrl);
+  const hasVideo = Boolean(reel.videoUrl && reel.videoUrl.trim().length > 0);
   const hasCover = Boolean(reel.posterUrl && reel.posterUrl.trim().length > 0);
 
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -47,10 +47,10 @@ export function ReelViewer({
     .map((id) => allProducts.find((p) => p.id === id || p.slug === id))
     .filter((p): p is Product => Boolean(p));
 
-  // Auto-play on mount for hosted videos & handle keyboard escape
+  // Auto-play on mount for videos & handle keyboard escape
   useEffect(() => {
     const video = videoRef.current;
-    if (video && isHosted) {
+    if (video && hasVideo) {
       video.muted = isMuted;
       video.play().catch(() => setIsPlaying(false));
     }
@@ -72,11 +72,11 @@ export function ReelViewer({
         video.load();
       }
     };
-  }, [onClose, isMuted, isHosted]);
+  }, [onClose, isMuted, hasVideo]);
 
   const togglePlay = () => {
     const video = videoRef.current;
-    if (!video || !isHosted) return;
+    if (!video || !hasVideo) return;
     if (video.paused) {
       video.play();
       setIsPlaying(true);
@@ -89,7 +89,7 @@ export function ReelViewer({
   const toggleMute = (e: React.MouseEvent) => {
     e.stopPropagation();
     const video = videoRef.current;
-    if (video && isHosted) {
+    if (video && hasVideo) {
       video.muted = !isMuted;
       setIsMuted(!isMuted);
     }
@@ -125,8 +125,8 @@ export function ReelViewer({
       >
         {/* Left Side: 9:16 Video / Cover Stage */}
         <div className="relative flex-1 bg-black flex items-center justify-center overflow-hidden min-h-[50vh] lg:min-h-0">
-          {isHosted ? (
-            /* Hosted MP4 Video Playback */
+          {hasVideo ? (
+            /* MP4 Video Playback */
             <>
               <video
                 ref={videoRef}
@@ -241,7 +241,7 @@ export function ReelViewer({
             </span>
 
             <div className="flex items-center gap-2">
-              {isHosted && (
+              {hasVideo && (
                 <button
                   onClick={toggleMute}
                   className="flex h-9 w-9 items-center justify-center rounded-full bg-black/60 backdrop-blur-md text-ivory hover:text-champagne border border-white/20 transition"

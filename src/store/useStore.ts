@@ -1110,11 +1110,36 @@ export const useStore = create<StoreState>()(
   )
 );
 
-// Seamlessly migrate legacy local storage key if present
+// Seamlessly migrate legacy local storage key if present and repair stale reel video URLs
 if (typeof window !== "undefined") {
   try {
     if (!localStorage.getItem("vrundora-store") && localStorage.getItem("shraddhanand-store")) {
       localStorage.setItem("vrundora-store", localStorage.getItem("shraddhanand-store")!);
+    }
+
+    const raw = localStorage.getItem("vrundora-store");
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed?.state?.reels) {
+        let changed = false;
+        const fixedReels = parsed.state.reels.map((r: any, idx: number) => {
+          if (!r.videoUrl || r.videoUrl.includes("w3schools.com")) {
+            changed = true;
+            return {
+              ...r,
+              videoUrl: `/reels/reel-${(idx % 8) + 1}.mp4`,
+            };
+          }
+          return r;
+        });
+        if (changed) {
+          parsed.state.reels = fixedReels;
+          localStorage.setItem("vrundora-store", JSON.stringify(parsed));
+          setTimeout(() => {
+            useStore.setState({ reels: fixedReels });
+          }, 0);
+        }
+      }
     }
   } catch {}
 }

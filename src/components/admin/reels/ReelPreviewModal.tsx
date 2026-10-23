@@ -41,7 +41,7 @@ export default function ReelPreviewModal({
   const [videoError, setVideoError] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  const isHosted = reel?.mediaType === "hosted" && Boolean(reel?.videoUrl);
+  const hasVideo = Boolean(reel?.videoUrl && reel.videoUrl.trim().length > 0);
   const hasCover = Boolean(reel?.posterUrl && reel.posterUrl.trim().length > 0);
 
   useEffect(() => {
@@ -65,7 +65,7 @@ export default function ReelPreviewModal({
     .filter(Boolean);
 
   const togglePlay = () => {
-    if (!videoRef.current || !isHosted) return;
+    if (!videoRef.current || !hasVideo) return;
     if (isPlaying) {
       videoRef.current.pause();
       setIsPlaying(false);
@@ -76,7 +76,7 @@ export default function ReelPreviewModal({
   };
 
   const toggleMute = () => {
-    if (!videoRef.current || !isHosted) return;
+    if (!videoRef.current || !hasVideo) return;
     videoRef.current.muted = !isMuted;
     setIsMuted(!isMuted);
   };
@@ -103,8 +103,8 @@ export default function ReelPreviewModal({
 
         {/* Video / Visual Preview Side */}
         <div className="relative w-full md:w-[420px] aspect-[9/16] bg-black flex-shrink-0 flex items-center justify-center overflow-hidden">
-          {isHosted && !videoError ? (
-            /* Hosted MP4 Video */
+          {hasVideo && !videoError ? (
+            /* MP4 Video */
             <>
               <video
                 ref={videoRef}

@@ -526,7 +526,7 @@ export function ProductView() {
                 <p className="text-sm leading-relaxed text-foreground/80">{product.description}</p>
                 <p className="mt-4 text-sm leading-relaxed text-foreground/80">
                   Each piece is hand-finished in our studio and undergoes a multi-step quality check
-                  before being carefully packed in our signature Shraddhanand box — ready to gift or treasure.
+                  before being carefully packed in our signature VRUNDORA box — ready to gift or treasure.
                 </p>
               </div>
               <div className="rounded-lg border border-border p-5">

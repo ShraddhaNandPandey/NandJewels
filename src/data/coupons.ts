@@ -36,6 +36,14 @@ export const coupons: Coupon[] = [
     description: "15% off, exclusive for first-time buyers",
     expiresOn: "2026-12-31",
   },
+  {
+    code: "VRUNDORA200",
+    type: "flat",
+    value: 200,
+    minOrder: 1000,
+    description: "Flat ₹200 off signature collections",
+    expiresOn: "2026-12-31",
+  },
 ];
 
 export function validateCoupon(

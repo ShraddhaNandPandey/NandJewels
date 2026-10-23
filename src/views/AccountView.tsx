@@ -44,10 +44,13 @@ export function AccountView() {
   if (!user) {
     return (
       <div className="mx-auto max-w-3xl px-6 py-16 text-center animate-fade-up">
-        <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-accent">
-          <User className="h-9 w-9 text-muted-foreground" />
+        <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-accent/50 p-2">
+          <picture>
+            <source srcSet="/vrundora-emblem.webp" type="image/webp" />
+            <img src="/vrundora-emblem.png" alt="वृन्दोरा" className="h-16 w-16 object-contain" />
+          </picture>
         </div>
-        <h1 className="mt-6 font-serif text-3xl">Welcome to Shraddhanand</h1>
+        <h1 className="mt-6 font-serif text-3xl">Welcome to VRUNDORA (वृन्दोरा)</h1>
         <p className="mt-2 text-sm text-muted-foreground">Log in or create an account to access your dashboard.</p>
         <div className="mt-6 flex justify-center gap-3">
           <Button onClick={() => navigate("login")} className="bg-charcoal text-ivory hover:bg-charcoal/90">Login</Button>

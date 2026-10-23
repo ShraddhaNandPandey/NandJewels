@@ -16,10 +16,12 @@ const playfair = Playfair_Display({
 });
 
 export const metadata: Metadata = {
-  title: "श्रद्धानंद | Shraddhanand — Fashion & Demi-Fine Jewellery",
+  title: "वृन्दोरा | VRUNDORA — Fashion & Demi-Fine Jewellery",
   description:
-    "Shraddhanand (श्रद्धानंद) is a luxury destination for demi-fine fashion, artificial & imitation jewellery. Shop hand-finished earrings, necklaces, rings, bracelets, bangles and curated collections.",
+    "VRUNDORA (वृन्दोरा) is a luxury destination for demi-fine fashion, artificial & imitation jewellery. Shop hand-finished earrings, necklaces, rings, bracelets, bangles and curated collections.",
   keywords: [
+    "VRUNDORA",
+    "वृन्दोरा",
     "artificial jewellery",
     "fashion jewellery",
     "imitation jewellery",
@@ -27,14 +29,15 @@ export const metadata: Metadata = {
     "earrings",
     "necklaces",
     "rings",
-    "Shraddhanand",
-    "श्रद्धानंद",
   ],
-  authors: [{ name: "Shraddhanand" }],
+  authors: [{ name: "VRUNDORA" }],
   icons: {
-    icon: "/favicon.svg",
-    shortcut: "/logo.svg",
-    apple: "/logo.svg",
+    icon: [
+      { url: "/favicon.png", type: "image/png" },
+      { url: "/favicon.svg", type: "image/svg+xml" },
+    ],
+    shortcut: "/vrundora-emblem.png",
+    apple: "/vrundora-emblem.png",
   },
 };
 

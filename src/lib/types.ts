@@ -1,4 +1,4 @@
-// Core domain types for the Shraddhanand jewellery store
+// Core domain types for the VRUNDORA jewellery store
 
 export type CategorySlug =
   | "earrings"

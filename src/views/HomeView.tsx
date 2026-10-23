@@ -45,7 +45,7 @@ export function HomeView() {
               sub: "Hypoallergenic & safe",
               action: () =>
                 pushToast({
-                  title: "Shraddhanand Quality Promise",
+                  title: "VRUNDORA Quality Promise",
                   description: "100% skin-safe, anti-tarnish 18k gold vermeil backed by our lifetime polish care.",
                   variant: "success",
                 }),
@@ -271,7 +271,7 @@ export function HomeView() {
             {
               name: "Priya Sharma",
               city: "Mumbai",
-              text: "The Aurora pearl drops are my new favourite. Quality you can feel — and the signature Shraddhanand packaging is breathtaking.",
+              text: "The Aurora pearl drops are my new favourite. Quality you can feel — and the signature VRUNDORA packaging is breathtaking.",
               rating: 5,
             },
             {
@@ -320,7 +320,7 @@ export function HomeView() {
       {/* Instagram strip with working interactive styling pins */}
       <section className="mx-auto max-w-7xl px-6 pb-16">
         <SectionHeader
-          eyebrow="@shraddhanand.jewellery"
+          eyebrow="@vrundora.jewellery"
           title="Styled by you"
           actionLabel="View on Instagram"
           onAction={() => window.open("https://instagram.com", "_blank", "noopener,noreferrer")}

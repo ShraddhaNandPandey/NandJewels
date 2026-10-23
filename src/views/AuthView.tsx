@@ -62,13 +62,13 @@ export function AuthView() {
         <div className="relative h-[520px] overflow-hidden rounded-xl">
           <img
             src="https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?auto=format&fit=crop&w=900&q=80"
-            alt="श्रद्धानंद"
+            alt="वृन्दोरा"
             className="absolute inset-0 h-full w-full object-cover"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-charcoal/80 via-charcoal/20 to-transparent" />
           <div className="absolute inset-x-0 bottom-0 p-8 text-ivory">
             <Sparkles className="h-6 w-6 text-champagne" />
-            <p className="mt-3 font-serif text-2xl">Join the Shraddhanand circle</p>
+            <p className="mt-3 font-serif text-2xl">Join the VRUNDORA circle</p>
             <p className="mt-1 text-sm text-ivory/70">
               Early access to new collections, private sales and member-only styling notes.
             </p>
@@ -78,11 +78,17 @@ export function AuthView() {
 
       {/* Form */}
       <div className="mx-auto w-full max-w-md">
-        <button onClick={() => navigate("home")} className="flex items-center gap-2.5 font-serif text-3xl font-bold">
-          <span>श्रद्धानंद</span>
-          <span className="text-xs uppercase tracking-[0.2em] text-champagne font-sans font-medium border-l border-border pl-2">
-            Shraddhanand
-          </span>
+        <button onClick={() => navigate("home")} className="flex items-center gap-3 group text-left" aria-label="वृन्दोरा (VRUNDORA) home">
+          <picture className="shrink-0">
+            <source srcSet="/vrundora-emblem.webp" type="image/webp" />
+            <img src="/vrundora-emblem.png" alt="वृन्दोरा" className="h-12 w-12 object-contain transition-transform group-hover:scale-105" />
+          </picture>
+          <div className="flex flex-col">
+            <span className="font-serif text-3xl font-bold tracking-tight text-foreground leading-none">वृन्दोरा</span>
+            <span className="text-[10px] uppercase tracking-[0.25em] text-champagne font-semibold mt-1">
+              VRUNDORA Jewellery
+            </span>
+          </div>
         </button>
         <h1 className="mt-6 font-serif text-3xl">{isRegister ? "Create your account" : "Welcome back"}</h1>
         <p className="mt-1 text-sm text-muted-foreground">
@@ -165,12 +171,12 @@ export function AuthView() {
         </div>
 
         <div className="grid grid-cols-2 gap-3">
-          <Button variant="outline" onClick={() => { login("guest@shraddhanand.com"); navigate("account"); }}>Continue with Google</Button>
-          <Button variant="outline" onClick={() => { login("guest@shraddhanand.com"); navigate("account"); }}>Continue as guest</Button>
+          <Button variant="outline" onClick={() => { login("guest@vrundora.com"); navigate("account"); }}>Continue with Google</Button>
+          <Button variant="outline" onClick={() => { login("guest@vrundora.com"); navigate("account"); }}>Continue as guest</Button>
         </div>
 
         <p className="mt-6 text-center text-sm text-muted-foreground">
-          {isRegister ? "Already have an account?" : "New to Shraddhanand?"}{" "}
+          {isRegister ? "Already have an account?" : "New to VRUNDORA?"}{" "}
           <button onClick={() => navigate("login", { mode: isRegister ? "login" : "register" })} className="font-medium text-charcoal hover:underline">
             {isRegister ? "Login" : "Create an account"}
           </button>

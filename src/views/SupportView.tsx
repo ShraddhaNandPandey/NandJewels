@@ -88,12 +88,12 @@ export function SupportView() {
         <div className="rounded-xl border border-border bg-card p-5">
           <Mail className="h-5 w-5 text-charcoal" />
           <p className="mt-2 text-sm font-medium">Email us</p>
-          <p className="text-xs text-muted-foreground">care@shraddhanand.com</p>
+          <p className="text-xs text-muted-foreground">care@vrundora.com</p>
         </div>
         <div className="rounded-xl border border-border bg-card p-5">
           <Phone className="h-5 w-5 text-charcoal" />
           <p className="mt-2 text-sm font-medium">Call us</p>
-          <p className="text-xs text-muted-foreground">1800-200-SHRD (24/7)</p>
+          <p className="text-xs text-muted-foreground">1800-200-VRUN (24/7)</p>
         </div>
         <div className="rounded-xl border border-border bg-card p-5">
           <Clock className="h-5 w-5 text-charcoal" />

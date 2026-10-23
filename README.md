@@ -1,8 +1,8 @@
-# Shraddhanand (श्रद्धानंद) — Fashion & Demi-Fine Jewellery E-Commerce
+# VRUNDORA (वृन्दोरा) — Fashion & Demi-Fine Jewellery E-Commerce
 
 A complete, production-quality, responsive **single-vendor fashion/artificial jewellery e-commerce** website built with **Next.js 16, TypeScript, Tailwind CSS 4, shadcn/ui, Zustand, and Recharts**.
 
-> Shraddhanand (श्रद्धानंद) sells demi-fine fashion / artificial / imitation jewellery — **not** gold jewellery. The design is premium, elegant, image-focused and conversion-oriented.
+> VRUNDORA (वृन्दोरा) sells demi-fine fashion / artificial / imitation jewellery — **not** gold jewellery. The design is premium, elegant, image-focused and conversion-oriented.
 
 ---
 

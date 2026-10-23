@@ -164,12 +164,15 @@ export function AdminView() {
           <div className="flex h-full flex-col">
             <div className="flex items-center justify-between border-b border-border px-5 py-4">
               <div className="flex items-center gap-2.5">
-                <div className="flex h-8 w-8 items-center justify-center rounded-md bg-charcoal text-ivory">
-                  <LayoutDashboard className="h-4 w-4" />
+                <div className="flex h-9 w-9 items-center justify-center rounded-md bg-accent/60 p-1 shrink-0">
+                  <picture>
+                    <source srcSet="/vrundora-emblem.webp" type="image/webp" />
+                    <img src="/vrundora-emblem.png" alt="वृन्दोरा" className="h-7 w-7 object-contain" />
+                  </picture>
                 </div>
                 <div>
                   <p className="text-sm font-semibold">Admin Panel</p>
-                  <p className="text-xs text-muted-foreground">Shraddhanand Jewellery</p>
+                  <p className="text-xs text-muted-foreground">VRUNDORA (वृन्दोरा)</p>
                 </div>
               </div>
               <button
@@ -227,7 +230,7 @@ export function AdminView() {
               </Button>
               <div className="min-w-0">
                 <h1 className="font-serif text-lg sm:text-2xl font-bold capitalize truncate">{section}</h1>
-                <p className="text-[10px] sm:text-xs text-muted-foreground truncate">Admin Workspace · Shraddhanand Store</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground truncate">Admin Workspace · VRUNDORA Store</p>
               </div>
             </div>
             <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
@@ -361,8 +364,8 @@ export function AdminView() {
               AD
             </div>
             <div>
-              <p className="font-medium text-sm">Shraddhanand Admin</p>
-              <p className="text-xs text-muted-foreground">admin@shraddhanand.com</p>
+              <p className="font-medium text-sm">VRUNDORA Admin</p>
+              <p className="text-xs text-muted-foreground">admin@vrundora.com</p>
               <Badge variant="outline" className="mt-1 border-champagne bg-champagne/10 text-charcoal text-[10px]">
                 Super Admin
               </Badge>
@@ -1557,7 +1560,7 @@ function ProductsSection() {
             <DialogDescription>
               {productTypeTab === "combo"
                 ? "Bundle multiple jewellery pieces together at a special combo price."
-                : "Create a new handcrafted piece for the Shraddhanand jewellery collection."}
+                : "Create a new handcrafted piece for the VRUNDORA jewellery collection."}
             </DialogDescription>
           </DialogHeader>
 
@@ -3159,7 +3162,7 @@ function ShippingLabelModal({
                 <div className="border-b border-black pb-2 text-[10px]">
                   <span className="font-bold text-neutral-700 uppercase">RETURN TO (SENDER):</span>
                   <p className="font-bold text-black">
-                    {storeSettings?.storeName || "Aurelle Fine Jewellery"} · Central Vault
+                    {storeSettings?.storeName || "VRUNDORA Fine Jewellery"} · Central Vault
                   </p>
                   <p className="text-neutral-700">
                     {storeSettings?.address || "Peninsula Business Park, Lower Parel, Mumbai, MH - 400013"}
@@ -3197,7 +3200,7 @@ function ShippingLabelModal({
                     <p><span className="font-bold">Security Seal:</span> TS-94812-PASS</p>
                   </div>
                   <div>
-                    <QrCodeSvg value={`https://shraddhanand.com/track?awb=${trackingAwb}`} />
+                    <QrCodeSvg value={`https://vrundora.com/track?awb=${trackingAwb}`} />
                   </div>
                 </div>
 
@@ -3213,7 +3216,7 @@ function ShippingLabelModal({
                 <div className="flex items-start justify-between border-b-2 border-black pb-3">
                   <div>
                     <h2 className="font-serif text-2xl font-bold tracking-tight text-black">
-                      {storeSettings?.storeName || "Aurelle Fine Jewellery"}
+                      {storeSettings?.storeName || "VRUNDORA Fine Jewellery"}
                     </h2>
                     <p className="text-xs text-neutral-600">Luxury Handcrafted Jewellery & Solitaires</p>
                     <p className="text-[11px] text-neutral-500 mt-1">
@@ -4578,7 +4581,7 @@ function ReviewsSection() {
                     <div>
                       <p className="text-sm font-medium">{r.author}</p>
                       <p className="text-xs text-muted-foreground">
-                        on <span className="font-medium text-foreground/80">{r.productName || "Shraddhanand Jewellery"}</span> · {r.date}
+                        on <span className="font-medium text-foreground/80">{r.productName || "VRUNDORA Jewellery"}</span> · {r.date}
                       </p>
                     </div>
                   </div>
@@ -4745,7 +4748,7 @@ function ReportsSection({ orders }: { orders: ReturnType<typeof useStore.getStat
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `shraddhanand_sales_report_${timeRange}.csv`);
+    link.setAttribute("download", `vrundora_sales_report_${timeRange}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -5038,7 +5041,7 @@ function SettingsSection() {
               <Input
                 required
                 type="email"
-                placeholder="ramesh@shraddhanand.com"
+                placeholder="ramesh@vrundora.com"
                 value={inviteForm.email}
                 onChange={(e) => setInviteForm({ ...inviteForm, email: e.target.value })}
                 className="mt-1"

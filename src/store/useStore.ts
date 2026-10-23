@@ -317,7 +317,7 @@ const initialOrders: Order[] = [
     shipping: 0,
     tax: Math.round((allProducts[4].price - 200) * 0.03),
     total: allProducts[4].price - 200 + Math.round((allProducts[4].price - 200) * 0.03),
-    couponCode: "AURELLE200",
+    couponCode: "VRUNDORA200",
     address: {
       id: "addr-mum",
       label: "Home",
@@ -440,7 +440,7 @@ export const useStore = create<StoreState>()(
       login: (email) => {
         const user: User = {
           id: uid("usr"),
-          firstName: "Shraddhanand",
+          firstName: "VRUNDORA",
           lastName: "Member",
           email,
           phone: "+91 98765 43210",
@@ -452,7 +452,7 @@ export const useStore = create<StoreState>()(
       register: (data) => {
         const user: User = { ...data, id: uid("usr"), createdAt: new Date().toISOString() };
         set({ user });
-        get().pushToast({ title: "Account created", description: "Welcome to Shraddhanand.", variant: "success" });
+        get().pushToast({ title: "Account created", description: "Welcome to VRUNDORA.", variant: "success" });
       },
       logout: () => {
         set({ user: null, view: "home" });
@@ -582,7 +582,7 @@ export const useStore = create<StoreState>()(
         {
           id: uid("addr"),
           label: "Home",
-          name: "Shraddhanand Member",
+          name: "VRUNDORA Member",
           phone: "+91 98765 43210",
           line1: "12 Jasmine Heights, Linking Road",
           line2: "Flat 4B",
@@ -707,7 +707,7 @@ export const useStore = create<StoreState>()(
           paymentStatus: paymentMethod === "cod" ? "pending" : "paid",
           status: "placed",
           trackingNumber: `TRK${Math.floor(Math.random() * 10000000)}`,
-          courier: "Shraddhanand Express",
+          courier: "VRUNDORA Express",
           placedAt: placedAt.toISOString(),
           estimatedDelivery: estDelivery.toISOString(),
           timeline: buildTimeline("placed"),
@@ -788,7 +788,7 @@ export const useStore = create<StoreState>()(
         {
           id: uid("ntf"),
           type: "system",
-          title: "Welcome to Shraddhanand",
+          title: "Welcome to VRUNDORA",
           body: "Use code WELCOME10 for 10% off your first order.",
           date: new Date().toISOString(),
           read: false,
@@ -939,9 +939,9 @@ export const useStore = create<StoreState>()(
 
       // store settings
       storeSettings: {
-        storeName: "Shraddhanand (श्रद्धानंद) Jewellery",
-        supportEmail: "care@shraddhanand.com",
-        supportPhone: "1800-200-SHRD",
+        storeName: "VRUNDORA (वृन्दोरा) Jewellery",
+        supportEmail: "care@vrundora.com",
+        supportPhone: "1800-200-VRUN",
         currency: "INR (₹)",
         freeShippingThreshold: 999,
         taxRate: 3,
@@ -958,10 +958,10 @@ export const useStore = create<StoreState>()(
 
       // admin users
       adminUsers: [
-        { id: "u1", name: "Shraddhanand Admin", email: "admin@shraddhanand.com", role: "Super Admin", perms: "All access" },
-        { id: "u2", name: "Pooja Mehta", email: "pooja.m@shraddhanand.com", role: "Store Manager", perms: "Catalog, Orders, Customers" },
-        { id: "u3", name: "Rahul Verma", email: "rahul.v@shraddhanand.com", role: "Support Agent", perms: "Orders, Support, Reviews" },
-        { id: "u4", name: "Ananya Iyer", email: "ananya.i@shraddhanand.com", role: "Analytics Viewer", perms: "Reports only" },
+        { id: "u1", name: "VRUNDORA Admin", email: "admin@vrundora.com", role: "Super Admin", perms: "All access" },
+        { id: "u2", name: "Pooja Mehta", email: "pooja.m@vrundora.com", role: "Store Manager", perms: "Catalog, Orders, Customers" },
+        { id: "u3", name: "Rahul Verma", email: "rahul.v@vrundora.com", role: "Support Agent", perms: "Orders, Support, Reviews" },
+        { id: "u4", name: "Ananya Iyer", email: "ananya.i@vrundora.com", role: "Analytics Viewer", perms: "Reports only" },
       ],
       addAdminUser: (u) => {
         const newUser = { ...u, id: uid("adm") };
@@ -993,7 +993,7 @@ export const useStore = create<StoreState>()(
       dismissToast: (id) => set({ toasts: get().toasts.filter((t) => t.id !== id) }),
     }),
     {
-      name: "shraddhanand-store",
+      name: "vrundora-store",
       partialize: (s) => ({
         cart: s.cart,
         wishlist: s.wishlist,
@@ -1012,6 +1012,15 @@ export const useStore = create<StoreState>()(
     }
   )
 );
+
+// Seamlessly migrate legacy local storage key if present
+if (typeof window !== "undefined") {
+  try {
+    if (!localStorage.getItem("vrundora-store") && localStorage.getItem("shraddhanand-store")) {
+      localStorage.setItem("vrundora-store", localStorage.getItem("shraddhanand-store")!);
+    }
+  } catch {}
+}
 
 // Keep data/products helper dynamically linked to useStore
 if (typeof window !== "undefined") {

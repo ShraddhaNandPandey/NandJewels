@@ -106,20 +106,23 @@ export function Header() {
           <button
             onClick={() => navigate("home")}
             className="flex items-center gap-2 sm:gap-3 shrink-0 group text-left min-w-0"
-            aria-label="श्रद्धानंद (Shraddhanand) home"
+            aria-label="वृन्दोरा (VRUNDORA) home"
           >
-            <img
-              src="/logo.svg"
-              alt="श्रद्धानंद"
-              aria-hidden="true"
-              className="h-8 w-8 sm:h-10 sm:w-10 object-contain transition-transform duration-300 group-hover:scale-105 shrink-0"
-            />
+            <picture className="shrink-0">
+              <source srcSet="/vrundora-emblem.webp" type="image/webp" />
+              <img
+                src="/vrundora-emblem.png"
+                alt="वृन्दोरा"
+                aria-hidden="true"
+                className="h-9 w-9 sm:h-11 sm:w-11 object-contain transition-transform duration-300 group-hover:scale-105 shrink-0"
+              />
+            </picture>
             <div className="flex flex-col min-w-0">
               <span className="font-serif text-lg sm:text-2xl font-bold tracking-tight text-foreground leading-none truncate">
-                श्रद्धानंद
+                वृन्दोरा
               </span>
-              <span className="text-[9px] sm:text-[10px] uppercase tracking-[0.18em] sm:tracking-[0.25em] text-champagne font-medium mt-0.5 whitespace-nowrap">
-                Shraddhanand <span className="hidden min-[420px]:inline text-[9px] text-muted-foreground font-normal tracking-[0.15em]">Jewellery</span>
+              <span className="text-[9px] sm:text-[10px] uppercase tracking-[0.2em] sm:tracking-[0.28em] text-champagne font-semibold mt-0.5 whitespace-nowrap">
+                VRUNDORA <span className="hidden min-[420px]:inline text-[9px] text-muted-foreground font-normal tracking-[0.15em]">Jewellery</span>
               </span>
             </div>
           </button>
@@ -312,9 +315,18 @@ export function Header() {
             onClick={() => setMobileMenuOpen(false)}
           />
           <div className="absolute left-0 top-0 h-full w-[85%] max-w-sm bg-background shadow-xl flex flex-col animate-fade-up">
-            <div className="flex items-center justify-between border-b border-border px-4 py-4">
-              <span className="font-serif text-xl font-semibold">Menu</span>
-              <button onClick={() => setMobileMenuOpen(false)} aria-label="Close menu">
+            <div className="flex items-center justify-between border-b border-border px-4 py-3.5">
+              <div className="flex items-center gap-2.5">
+                <picture className="shrink-0">
+                  <source srcSet="/vrundora-emblem.webp" type="image/webp" />
+                  <img src="/vrundora-emblem.png" alt="वृन्दोरा" className="h-8 w-8 object-contain" />
+                </picture>
+                <div className="flex flex-col">
+                  <span className="font-serif text-lg font-bold leading-tight text-foreground">वृन्दोरा</span>
+                  <span className="text-[9px] uppercase tracking-[0.2em] text-champagne font-semibold">VRUNDORA</span>
+                </div>
+              </div>
+              <button onClick={() => setMobileMenuOpen(false)} aria-label="Close menu" className="p-1 rounded-md hover:bg-accent text-foreground">
                 <X className="h-5 w-5" />
               </button>
             </div>

@@ -414,7 +414,7 @@ export function EditorialHero() {
                       <div className="flex flex-1 flex-col justify-between">
                         <div>
                           <p className="text-[10px] uppercase tracking-wider text-champagne/90">
-                            {slide.chapter.split("/")[1]?.trim() || "Shraddhanand Fine"}
+                            {slide.chapter.split("/")[1]?.trim() || "VRUNDORA Fine"}
                           </p>
                           <h2 className="font-serif text-sm font-medium text-ivory line-clamp-1 mt-0.5">
                             {slide.featuredProduct.name}

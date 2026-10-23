@@ -27,7 +27,7 @@ export function Footer() {
       return;
     }
     pushToast({
-      title: "Subscribed to Shraddhanand Circle!",
+      title: "Subscribed to VRUNDORA Circle!",
       description: "Welcome privilege: Use code WELCOME10 for 10% off your first purchase.",
       variant: "success",
     });
@@ -40,19 +40,19 @@ export function Footer() {
         return {
           title: "Privacy & Data Protection Policy",
           content:
-            "At Shraddhanand Jewellery, your personal data and privacy are held with utmost sanctity. We use industry-standard 256-bit SSL encryption to process all transactions. We never sell, rent, or share your personal details with third-party advertising brokers. Your order and contact details are used strictly for order fulfillment, dispatch updates, and confidential customer care.",
+            "At VRUNDORA Jewellery, your personal data and privacy are held with utmost sanctity. We use industry-standard 256-bit SSL encryption to process all transactions. We never sell, rent, or share your personal details with third-party advertising brokers. Your order and contact details are used strictly for order fulfillment, dispatch updates, and confidential customer care.",
         };
       case "terms":
         return {
           title: "Terms of Service",
           content:
-            "By browsing and shopping on Shraddhanand (श्रद्धानंद), you agree to our fair terms of service. All demi-fine fashion jewellery pieces are crafted with hypoallergenic materials, 18K gold vermeil plating, and premium crystal accents as specified in the item descriptions. Product dimensions, materials, and care guides are meticulously detailed to ensure total transparency.",
+            "By browsing and shopping on VRUNDORA (वृन्दोरा), you agree to our fair terms of service. All demi-fine fashion jewellery pieces are crafted with hypoallergenic materials, 18K gold vermeil plating, and premium crystal accents as specified in the item descriptions. Product dimensions, materials, and care guides are meticulously detailed to ensure total transparency.",
         };
       case "refund":
         return {
           title: "7-Day Hassle-Free Refund Policy",
           content:
-            "We offer a 7-day complimentary return and full refund policy on all unworn items in their original Shraddhanand luxury packaging. Once picked up and verified by our quality studio, your refund is credited directly to your original payment method (or UPI account) within 5–7 business days without hidden deductions.",
+            "We offer a 7-day complimentary return and full refund policy on all unworn items in their original VRUNDORA luxury packaging. Once picked up and verified by our quality studio, your refund is credited directly to your original payment method (or UPI account) within 5–7 business days without hidden deductions.",
         };
       case "shipping":
         return {
@@ -73,7 +73,7 @@ export function Footer() {
       <div className="border-b border-white/10">
         <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 sm:px-6 lg:px-8 py-8 sm:py-10 md:flex-row md:items-center md:justify-between">
           <div className="max-w-md">
-            <h3 className="font-serif text-2xl text-ivory">Join the Shraddhanand circle</h3>
+            <h3 className="font-serif text-2xl text-ivory">Join the VRUNDORA circle</h3>
             <p className="mt-1 text-sm text-ivory/60">
               Early access to new collections, private sales and styling notes — straight to your inbox.
             </p>
@@ -102,12 +102,20 @@ export function Footer() {
           <button
             onClick={() => navigate("home")}
             className="flex items-center gap-3 text-left group"
+            aria-label="वृन्दोरा (VRUNDORA) home"
           >
-            <img src="/logo.svg" alt="श्रद्धानंद" className="h-9 w-9 object-contain transition-transform group-hover:scale-105" />
+            <picture className="shrink-0">
+              <source srcSet="/vrundora-emblem.webp" type="image/webp" />
+              <img
+                src="/vrundora-emblem.png"
+                alt="वृन्दोरा"
+                className="h-10 w-10 object-contain transition-transform group-hover:scale-105"
+              />
+            </picture>
             <div>
-              <p className="font-serif text-2xl text-ivory font-bold leading-none">श्रद्धानंद</p>
-              <p className="text-[10px] uppercase tracking-[0.25em] text-champagne font-medium mt-0.5">
-                Shraddhanand Jewellery
+              <p className="font-serif text-2xl text-ivory font-bold leading-none">वृन्दोरा</p>
+              <p className="text-[10px] uppercase tracking-[0.25em] text-champagne font-semibold mt-0.5">
+                VRUNDORA Jewellery
               </p>
             </div>
           </button>
@@ -134,7 +142,7 @@ export function Footer() {
               <Facebook className="h-4 w-4" />
             </a>
             <a
-              href="mailto:care@shraddhanand.com"
+              href="mailto:care@vrundora.com"
               aria-label="Email"
               className="rounded-full border border-white/20 p-2 transition hover:border-champagne hover:text-champagne cursor-pointer"
             >
@@ -160,12 +168,12 @@ export function Footer() {
         </FooterCol>
 
         <FooterCol title="Company">
-          <FooterLink onClick={() => setAboutOpen(true)}>About Shraddhanand</FooterLink>
+          <FooterLink onClick={() => setAboutOpen(true)}>About VRUNDORA</FooterLink>
           <FooterLink
             onClick={() =>
               pushToast({
-                title: "Careers at Shraddhanand",
-                description: "We're expanding! Send your CV and portfolio to careers@shraddhanand.com.",
+                title: "Careers at VRUNDORA",
+                description: "We're expanding! Send your CV and portfolio to careers@vrundora.com.",
                 variant: "success",
               })
             }
@@ -191,20 +199,20 @@ export function Footer() {
               href="tel:18002007473"
               className="inline-flex items-center gap-1.5 hover:text-champagne transition-colors cursor-pointer"
             >
-              <Phone className="h-3.5 w-3.5 text-champagne" /> 1800-200-SHRD (24/7 Helpline)
+              <Phone className="h-3.5 w-3.5 text-champagne" /> 1800-200-VRUN (24/7 Helpline)
             </a>
             <a
-              href="mailto:care@shraddhanand.com"
+              href="mailto:care@vrundora.com"
               className="inline-flex items-center gap-1.5 hover:text-champagne transition-colors cursor-pointer"
             >
-              <Mail className="h-3.5 w-3.5 text-champagne" /> care@shraddhanand.com
+              <Mail className="h-3.5 w-3.5 text-champagne" /> care@vrundora.com
             </a>
             <span className="inline-flex items-center gap-1.5">
               <MapPin className="h-3.5 w-3.5 text-champagne" /> Mumbai, Maharashtra, India
             </span>
           </div>
           <div className="flex flex-col items-start gap-1 sm:items-end">
-            <p>© {new Date().getFullYear()} Shraddhanand (श्रद्धानंद) Jewellery. All rights reserved.</p>
+            <p>© {new Date().getFullYear()} VRUNDORA (वृन्दोरा) Jewellery. All rights reserved.</p>
             <p className="text-[11px] text-ivory/70">
               Developer contact: <span className="font-medium text-ivory">Shraddha Nand Pandey</span>{" "}
               <span aria-label="blue heart" className="text-blue-500">♥</span>
@@ -221,11 +229,11 @@ export function Footer() {
               <Sparkles className="h-4 w-4 text-champagne" />
               <span className="text-xs uppercase tracking-[0.25em] text-champagne font-semibold">Our Heritage</span>
             </div>
-            <DialogTitle className="font-serif text-2xl">About Shraddhanand (श्रद्धानंद)</DialogTitle>
+            <DialogTitle className="font-serif text-2xl">About VRUNDORA (वृन्दोरा)</DialogTitle>
             <DialogDescription className="text-sm leading-relaxed text-foreground/80 pt-2 space-y-3">
               <p>
-                Rooted in the timeless Sanskrit essence of devotion (<em>Shraddha</em>) and pure bliss (<em>Anand</em>), 
-                <strong> Shraddhanand Jewellery</strong> creates demi-fine heirlooms crafted to celebrate life's everyday brilliance.
+                Inspired by timeless grace, divine beauty, and bespoke craftsmanship, 
+                <strong> VRUNDORA Jewellery</strong> creates demi-fine heirlooms crafted to celebrate life's everyday brilliance.
               </p>
               <p>
                 Each piece is cast in skin-safe, hypoallergenic brass alloys and finished with thick 18K gold vermeil plating, 

@@ -17,7 +17,7 @@ export function SearchModal() {
   const [recent, setRecent] = useState<string[]>([]);
 
   useEffect(() => {
-    const r = localStorage.getItem("shraddhanand-recent-searches");
+    const r = localStorage.getItem("vrundora-recent-searches") || localStorage.getItem("shraddhanand-recent-searches");
     // eslint-disable-next-line react-hooks/set-state-in-effect
     if (r) setRecent(JSON.parse(r));
   }, []);
@@ -42,7 +42,7 @@ export function SearchModal() {
   const saveRecent = (q: string) => {
     const next = [q, ...recent.filter((r) => r !== q)].slice(0, 6);
     setRecent(next);
-    localStorage.setItem("shraddhanand-recent-searches", JSON.stringify(next));
+    localStorage.setItem("vrundora-recent-searches", JSON.stringify(next));
   };
 
   const submit = (q: string) => {

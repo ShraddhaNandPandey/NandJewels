@@ -1123,7 +1123,14 @@ if (typeof window !== "undefined") {
       if (parsed?.state?.reels) {
         let changed = false;
         const fixedReels = parsed.state.reels.map((r: any, idx: number) => {
-          if (!r.videoUrl || r.videoUrl.includes("w3schools.com")) {
+          if (r.videoUrl && r.videoUrl.includes("w3schools.com")) {
+            changed = true;
+            return {
+              ...r,
+              videoUrl: `/reels/reel-${(idx % 8) + 1}.mp4`,
+            };
+          }
+          if (r.mediaType === "hosted" && (!r.videoUrl || r.videoUrl.trim().length === 0)) {
             changed = true;
             return {
               ...r,

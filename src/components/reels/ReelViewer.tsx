@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import Image from "next/image";
 import type { Reel, Product } from "@/lib/types";
 import { products as allProducts } from "@/data/products";
 import {
@@ -32,29 +33,64 @@ export function ReelViewer({
   onClose,
   onNavigateProduct,
 }: ReelViewerProps) {
+  // A reel has video ONLY if a non-empty videoUrl is provided
   const hasVideo = Boolean(reel.videoUrl && reel.videoUrl.trim().length > 0);
   const hasCover = Boolean(reel.posterUrl && reel.posterUrl.trim().length > 0);
 
   const videoRef = useRef<HTMLVideoElement>(null);
-  const [isPlaying, setIsPlaying] = useState(true);
-  const [isMuted, setIsMuted] = useState(false);
+
+  // Requirement #11: Initialize isPlaying to false and isMuted to true (must start muted for autoplay-safe launch)
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isMuted, setIsMuted] = useState(true);
+  const [videoReady, setVideoReady] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [sheetOpen, setSheetOpen] = useState(initialShowProducts);
 
-  // Retrieve linked products from existing product catalog
+  // Retrieve linked products from existing catalog
   const linkedProducts: Product[] = (reel.productIds || [])
     .map((id) => allProducts.find((p) => p.id === id || p.slug === id))
     .filter((p): p is Product => Boolean(p));
 
-  // Auto-play on mount for videos & handle keyboard escape
+  // Requirement #12 & #22: Initial playback lifecycle is completely independent of isMuted and onClose
   useEffect(() => {
     const video = videoRef.current;
-    if (video && hasVideo) {
-      video.muted = isMuted;
-      video.play().catch(() => setIsPlaying(false));
+    if (!video || !hasVideo) return;
+
+    // Explicitly configure video before playback
+    video.defaultMuted = true;
+    video.muted = true;
+    video.playsInline = true;
+
+    let isMounted = true;
+
+    const startPlay = () => {
+      if (!isMounted) return;
+      const playPromise = video.play();
+      if (playPromise !== undefined) {
+        playPromise
+          .then(() => {
+            if (isMounted) {
+              setIsPlaying(true);
+              setVideoReady(true);
+            }
+          })
+          .catch(() => {
+            if (isMounted) {
+              setIsPlaying(false);
+            }
+          });
+      }
+    };
+
+    if (video.readyState >= 2) {
+      startPlay();
+    } else {
+      video.addEventListener("canplay", startPlay, { once: true });
+      video.addEventListener("loadeddata", startPlay, { once: true });
     }
 
+    // Keyboard ESC listener
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
@@ -64,34 +100,42 @@ export function ReelViewer({
     document.body.style.overflow = "hidden";
 
     return () => {
+      isMounted = false;
       window.removeEventListener("keydown", onKeyDown);
       document.body.style.overflow = "";
-      if (video) {
-        video.pause();
-        video.removeAttribute("src");
-        video.load();
-      }
-    };
-  }, [onClose, isMuted, hasVideo]);
-
-  const togglePlay = () => {
-    const video = videoRef.current;
-    if (!video || !hasVideo) return;
-    if (video.paused) {
-      video.play();
-      setIsPlaying(true);
-    } else {
+      video.removeEventListener("canplay", startPlay);
+      video.removeEventListener("loadeddata", startPlay);
+      // Clean pause on close without tearing down the src during normal interaction
       video.pause();
-      setIsPlaying(false);
-    }
-  };
+    };
+  }, [hasVideo, reel.videoUrl, onClose]);
 
+  // Requirement #15: Separate mute toggle from playback lifecycle — no reload or restart
   const toggleMute = (e: React.MouseEvent) => {
     e.stopPropagation();
     const video = videoRef.current;
-    if (video && hasVideo) {
-      video.muted = !isMuted;
-      setIsMuted(!isMuted);
+    if (video) {
+      const nextMuted = !isMuted;
+      video.muted = nextMuted;
+      setIsMuted(nextMuted);
+    }
+  };
+
+  // Requirement #16: Play/Pause button synchronized with actual video state
+  const handleTogglePlay = () => {
+    const video = videoRef.current;
+    if (!video || !hasVideo) return;
+
+    if (video.paused) {
+      const promise = video.play();
+      if (promise !== undefined) {
+        promise
+          .then(() => setIsPlaying(true))
+          .catch(() => setIsPlaying(false));
+      }
+    } else {
+      video.pause();
+      setIsPlaying(false);
     }
   };
 
@@ -103,6 +147,9 @@ export function ReelViewer({
   };
 
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
+
+  // Visual condition: video is visible only when it is actually playing and ready
+  const isVideoVisible = hasVideo && videoReady && isPlaying;
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md p-2 sm:p-4 md:p-6 animate-fade-up">
@@ -125,111 +172,127 @@ export function ReelViewer({
       >
         {/* Left Side: 9:16 Video / Cover Stage */}
         <div className="relative flex-1 bg-black flex items-center justify-center overflow-hidden min-h-[50vh] lg:min-h-0">
-          {hasVideo ? (
-            /* MP4 Video Playback */
-            <>
-              <video
-                ref={videoRef}
-                src={reel.videoUrl}
-                poster={reel.posterUrl}
-                playsInline
-                loop
-                onClick={togglePlay}
-                onTimeUpdate={handleTimeUpdate}
-                className="h-full w-full object-contain cursor-pointer"
-              />
-
-              {/* Play/Pause Overlay indicator when paused */}
-              {!isPlaying && (
-                <div
-                  onClick={togglePlay}
-                  className="absolute inset-0 flex items-center justify-center z-20 cursor-pointer bg-black/30"
-                >
-                  <div className="flex h-16 w-16 items-center justify-center rounded-full bg-charcoal/80 text-champagne border border-champagne/40 shadow-2xl backdrop-blur-sm">
-                    <Play className="h-8 w-8 fill-champagne ml-1" />
-                  </div>
-                </div>
+          {/* Requirement #13: Poster/Fallback is ALWAYS rendered underneath so user never sees a black/dark rectangle */}
+          {hasCover ? (
+            <img
+              src={reel.posterUrl}
+              alt={reel.title}
+              className={cn(
+                "absolute inset-0 h-full w-full object-contain transition-opacity duration-300",
+                isVideoVisible ? "opacity-0 pointer-events-none" : "opacity-100"
               )}
-
-              {/* Bottom Video Progress Bar */}
-              <div className="absolute inset-x-0 bottom-0 h-1 bg-white/20 z-30">
-                <div
-                  className="h-full bg-champagne transition-all duration-100"
-                  style={{ width: `${progress}%` }}
-                />
-              </div>
-            </>
+            />
           ) : (
-            /* Instagram Reel Stage: Cover image OR VRUNDORA Fallback Card */
-            <div className="relative w-full h-full flex items-center justify-center bg-stone-950">
-              {hasCover ? (
-                <img
-                  src={reel.posterUrl}
-                  alt={reel.title}
-                  className="h-full w-full object-contain"
-                />
-              ) : (
-                <div className="relative w-full h-full max-w-sm flex flex-col justify-between p-8 bg-gradient-to-b from-stone-900 via-stone-950 to-black text-ivory text-center rounded-2xl">
-                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_35%,rgba(201,169,106,0.22),transparent_70%)] pointer-events-none" />
-
-                  <div className="relative z-10 pt-8 flex flex-col items-center">
-                    <div className="w-14 h-14 rounded-full bg-champagne/20 border border-champagne/40 flex items-center justify-center mb-3 shadow-lg">
-                      <Sparkles className="w-7 h-7 text-champagne" />
-                    </div>
-                    <p className="text-xs uppercase tracking-[0.3em] text-champagne font-bold">
-                      VRUNDORA
-                    </p>
-                    <p className="text-[11px] uppercase tracking-wider text-ivory/60 mt-1">
-                      @VRUNDORA.JEWELLERY
-                    </p>
-                  </div>
-
-                  <div className="relative z-10 px-4 my-auto">
-                    <span className="inline-block px-3 py-1 rounded-full text-[10px] uppercase tracking-wider bg-champagne/20 text-champagne border border-champagne/40 mb-3 font-semibold">
-                      {reel.category || "Stories In Every Sparkle"}
-                    </span>
-                    <h3 className="font-serif text-2xl font-bold text-ivory leading-tight drop-shadow-md">
-                      {reel.title}
-                    </h3>
-                    {reel.caption && (
-                      <p className="text-xs text-ivory/80 mt-2 font-light line-clamp-3 leading-relaxed">
-                        {reel.caption}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="relative z-10 pb-4">
-                    {reel.instagramUrl && (
-                      <a
-                        href={reel.instagramUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center justify-center gap-2 w-full py-3 px-5 rounded-full bg-gradient-to-r from-pink-600 to-purple-600 text-white text-xs font-semibold hover:brightness-110 transition shadow-lg"
-                      >
-                        <Instagram className="w-4 h-4" />
-                        <span>Watch on Instagram</span>
-                        <ExternalLink className="w-3.5 h-3.5" />
-                      </a>
-                    )}
-                  </div>
-                </div>
+            <div
+              className={cn(
+                "absolute inset-0 w-full h-full flex flex-col justify-between p-8 bg-gradient-to-b from-stone-900 via-stone-950 to-black text-ivory text-center",
+                isVideoVisible ? "opacity-0 pointer-events-none" : "opacity-100"
               )}
+            >
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_35%,rgba(201,169,106,0.22),transparent_70%)] pointer-events-none" />
 
-              {/* Instagram Floating CTA if cover exists */}
-              {hasCover && reel.instagramUrl && (
-                <div className="absolute bottom-16 inset-x-6 z-30 flex justify-center">
+              <div className="relative z-10 pt-8 flex flex-col items-center">
+                <div className="w-14 h-14 rounded-full bg-champagne/20 border border-champagne/40 flex items-center justify-center mb-3 shadow-lg">
+                  <Sparkles className="w-7 h-7 text-champagne" />
+                </div>
+                <p className="text-xs uppercase tracking-[0.3em] text-champagne font-bold">
+                  VRUNDORA
+                </p>
+                <p className="text-[11px] uppercase tracking-wider text-ivory/60 mt-1">
+                  @VRUNDORA.JEWELLERY
+                </p>
+              </div>
+
+              <div className="relative z-10 px-4 my-auto">
+                <span className="inline-block px-3 py-1 rounded-full text-[10px] uppercase tracking-wider bg-champagne/20 text-champagne border border-champagne/40 mb-3 font-semibold">
+                  {reel.category || "Stories In Every Sparkle"}
+                </span>
+                <h3 className="font-serif text-2xl font-bold text-ivory leading-tight drop-shadow-md">
+                  {reel.title}
+                </h3>
+                {reel.caption && (
+                  <p className="text-xs text-ivory/80 mt-2 font-light line-clamp-3 leading-relaxed">
+                    {reel.caption}
+                  </p>
+                )}
+              </div>
+
+              <div className="relative z-10 pb-4">
+                {reel.instagramUrl && !hasVideo && (
                   <a
                     href={reel.instagramUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-pink-600 via-rose-600 to-amber-600 text-white px-5 py-2.5 text-xs font-bold shadow-2xl hover:scale-105 transition-all"
+                    className="inline-flex items-center justify-center gap-2 w-full py-3 px-5 rounded-full bg-gradient-to-r from-pink-600 to-purple-600 text-white text-xs font-semibold hover:brightness-110 transition shadow-lg"
                   >
                     <Instagram className="w-4 h-4" />
-                    <span>Watch Full Reel on Instagram</span>
+                    <span>Watch on Instagram</span>
                     <ExternalLink className="w-3.5 h-3.5" />
                   </a>
-                </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* HTML5 Video element — only rendered when valid videoUrl exists */}
+          {hasVideo && (
+            <video
+              ref={videoRef}
+              src={reel.videoUrl}
+              poster={reel.posterUrl}
+              playsInline
+              autoPlay
+              muted={isMuted}
+              loop
+              onClick={handleTogglePlay}
+              onTimeUpdate={handleTimeUpdate}
+              onLoadedData={() => setVideoReady(true)}
+              onCanPlay={() => setVideoReady(true)}
+              onPlay={() => setIsPlaying(true)}
+              onPause={() => setIsPlaying(false)}
+              onEnded={() => setIsPlaying(false)}
+              className={cn(
+                "h-full w-full object-contain cursor-pointer transition-opacity duration-300",
+                isVideoVisible ? "opacity-100" : "opacity-0 pointer-events-none"
               )}
+            />
+          )}
+
+          {/* Requirement #14: Play/Pause Overlay indicator when paused or autoplay blocked */}
+          {hasVideo && !isPlaying && (
+            <div
+              onClick={handleTogglePlay}
+              className="absolute inset-0 flex items-center justify-center z-20 cursor-pointer bg-black/40 backdrop-blur-[2px] transition-all"
+            >
+              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-charcoal/90 text-champagne border border-champagne/50 shadow-2xl transition-transform hover:scale-110 active:scale-95">
+                <Play className="h-8 w-8 fill-champagne ml-1" />
+              </div>
+            </div>
+          )}
+
+          {/* Bottom Video Progress Bar */}
+          {hasVideo && (
+            <div className="absolute inset-x-0 bottom-0 h-1 bg-white/20 z-30 pointer-events-none">
+              <div
+                className="h-full bg-champagne transition-all duration-100"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+          )}
+
+          {/* Instagram Floating CTA if no video but cover exists */}
+          {!hasVideo && reel.instagramUrl && (
+            <div className="absolute bottom-16 inset-x-6 z-30 flex justify-center">
+              <a
+                href={reel.instagramUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-pink-600 via-rose-600 to-amber-600 text-white px-5 py-2.5 text-xs font-bold shadow-2xl hover:scale-105 transition-all"
+              >
+                <Instagram className="w-4 h-4" />
+                <span>Watch Full Reel on Instagram</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </a>
             </div>
           )}
 
@@ -241,22 +304,24 @@ export function ReelViewer({
             </span>
 
             <div className="flex items-center gap-2">
+              {/* Mute Button */}
               {hasVideo && (
                 <button
                   onClick={toggleMute}
-                  className="flex h-9 w-9 items-center justify-center rounded-full bg-black/60 backdrop-blur-md text-ivory hover:text-champagne border border-white/20 transition"
-                  aria-label={isMuted ? "Unmute" : "Mute"}
+                  className="flex h-9 w-9 items-center justify-center rounded-full bg-black/60 backdrop-blur-md text-ivory hover:text-champagne border border-white/20 transition cursor-pointer"
+                  aria-label={isMuted ? "Unmute audio" : "Mute audio"}
                 >
                   {isMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
                 </button>
               )}
 
+              {/* Instagram Link Badge */}
               {reel.instagramUrl && (
                 <a
                   href={reel.instagramUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex h-9 w-9 items-center justify-center rounded-full bg-black/60 backdrop-blur-md text-pink-400 hover:text-pink-300 border border-pink-500/30 transition shadow-xs"
+                  className="flex h-9 w-9 items-center justify-center rounded-full bg-black/60 backdrop-blur-md text-pink-400 hover:text-pink-300 border border-pink-500/30 transition shadow-xs cursor-pointer"
                   title="View original on Instagram"
                 >
                   <Instagram className="h-4 w-4" />
@@ -398,7 +463,7 @@ export function ReelViewer({
             )}
             <button
               onClick={onClose}
-              className="w-full rounded-xl border border-border py-2 text-xs font-semibold hover:bg-accent transition"
+              className="w-full rounded-xl border border-border py-2 text-xs font-semibold hover:bg-accent transition cursor-pointer"
             >
               Back to Store
             </button>

@@ -82,7 +82,6 @@ export const initialReels: Reel[] = [
     category: "Styling",
     caption: "Real women, real radiance. How our community styles the signature Celeste collection.",
     mediaType: "instagram",
-    videoUrl: "/reels/reel-6.mp4",
     posterUrl: "https://images.unsplash.com/photo-1508009745836-4a14be7d4f3f?auto=format&fit=crop&w=800&q=80",
     instagramUrl: "https://www.instagram.com/reel/Desq3jFqXFn/",
     productIds: ["p1", "p5"],

@@ -14,84 +14,91 @@ interface ReelCardProps {
 }
 
 export function ReelCard({ reel, isCenter, onOpenViewer, onShopLook }: ReelCardProps) {
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [isMuted, setIsMuted] = useState(true);
-  const [videoLoaded, setVideoLoaded] = useState(false);
-  const videoRef = useRef<HTMLVideoElement>(null);
-
+  // Requirement #3: Check if valid videoUrl exists
   const hasVideo = Boolean(reel.videoUrl && reel.videoUrl.trim().length > 0);
   const hasCover = Boolean(reel.posterUrl && reel.posterUrl.trim().length > 0);
 
-  // Instant Autoplay when this card is in the center position
+  // Requirement #4: Never initialize isPlaying to true before the browser has actually started the video
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isMuted, setIsMuted] = useState(true);
+  const [videoReady, setVideoReady] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  // Requirement #6, #8, #9: Active reel lifecycle & readyState handling
   useEffect(() => {
     const video = videoRef.current;
     if (!video || !hasVideo) return;
 
-    // Strict muted setup to satisfy modern browser autoplay policies (Chrome, Safari, iOS, Brave)
-    video.defaultMuted = true;
-    video.muted = isMuted;
-    video.setAttribute("muted", "");
-    video.setAttribute("playsinline", "");
-    video.setAttribute("autoplay", "");
+    let isMounted = true;
 
     if (isCenter) {
-      const playVideo = () => {
-        const promise = video.play();
-        if (promise !== undefined) {
-          promise
+      // Requirement #5: Explicitly configure video before playback
+      video.defaultMuted = true;
+      video.muted = isMuted;
+      video.playsInline = true;
+
+      const attemptPlay = () => {
+        if (!isMounted) return;
+        const playPromise = video.play();
+        if (playPromise !== undefined) {
+          playPromise
             .then(() => {
-              setIsPlaying(true);
-              setVideoLoaded(true);
+              if (isMounted) {
+                setIsPlaying(true);
+                setVideoReady(true);
+              }
             })
             .catch(() => {
-              // Browser requires user interaction before unmuting or playing
-              setIsPlaying(false);
-
-              // Auto-retry on first touch/scroll/click gesture
-              const retryAutoplay = () => {
-                video.muted = true;
-                video.play().then(() => {
-                  setIsPlaying(true);
-                  setVideoLoaded(true);
-                }).catch(() => {});
-
-                window.removeEventListener("scroll", retryAutoplay);
-                window.removeEventListener("touchstart", retryAutoplay);
-                window.removeEventListener("click", retryAutoplay);
-              };
-
-              window.addEventListener("scroll", retryAutoplay, { once: true, passive: true });
-              window.addEventListener("touchstart", retryAutoplay, { once: true, passive: true });
-              window.addEventListener("click", retryAutoplay, { once: true });
+              if (isMounted) {
+                setIsPlaying(false);
+              }
             });
         }
       };
 
       if (video.readyState >= 2) {
-        playVideo();
+        attemptPlay();
       } else {
-        video.addEventListener("canplay", playVideo, { once: true });
-        video.addEventListener("loadeddata", playVideo, { once: true });
+        video.addEventListener("canplay", attemptPlay, { once: true });
+        video.addEventListener("loadeddata", attemptPlay, { once: true });
       }
+
+      return () => {
+        isMounted = false;
+        video.removeEventListener("canplay", attemptPlay);
+        video.removeEventListener("loadeddata", attemptPlay);
+        video.pause();
+        setIsPlaying(false);
+      };
     } else {
       video.pause();
       setIsPlaying(false);
     }
-  }, [isCenter, isMuted, hasVideo, reel.videoUrl]);
+  }, [isCenter, hasVideo, reel.videoUrl]);
 
+  // Requirement #15: Separate mute/unmute from autoplay effect
   const toggleMute = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (videoRef.current) {
-      videoRef.current.muted = !isMuted;
-      setIsMuted(!isMuted);
+    const video = videoRef.current;
+    if (video) {
+      const nextMuted = !isMuted;
+      video.muted = nextMuted;
+      setIsMuted(nextMuted);
     }
+  };
+
+  const handleCardClick = () => {
+    onOpenViewer(reel);
   };
 
   const productCount = reel.productIds?.length || 0;
 
+  // Requirement #10: Video is only visible after it has successfully started playing
+  const isVideoVisible = hasVideo && isCenter && videoReady && isPlaying;
+
   return (
     <div
-      onClick={() => onOpenViewer(reel)}
+      onClick={handleCardClick}
       className={cn(
         "group relative aspect-[9/16] w-full max-w-[280px] sm:max-w-[300px] cursor-pointer overflow-hidden rounded-2xl border bg-stone-950 shadow-lg transition-all duration-500 select-none",
         isCenter
@@ -99,7 +106,7 @@ export function ReelCard({ reel, isCenter, onOpenViewer, onShopLook }: ReelCardP
           : "border-border/60 opacity-80 sm:opacity-60 scale-95 hover:opacity-95 hover:scale-100 hover:border-champagne/40"
       )}
     >
-      {/* 1. Cover Image OR Elegant VRUNDORA Fallback Card */}
+      {/* 1. Requirement #10: Poster / Fallback is visible before video plays and stays visible if playback fails */}
       {hasCover ? (
         <img
           src={reel.posterUrl}
@@ -107,12 +114,17 @@ export function ReelCard({ reel, isCenter, onOpenViewer, onShopLook }: ReelCardP
           loading="lazy"
           className={cn(
             "absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-105",
-            hasVideo && isCenter && videoLoaded && isPlaying ? "opacity-0 pointer-events-none" : "opacity-100"
+            isVideoVisible ? "opacity-0 pointer-events-none" : "opacity-100"
           )}
         />
       ) : (
         /* Elegant VRUNDORA Fallback Card (When no cover photo is uploaded) */
-        <div className="absolute inset-0 flex flex-col justify-between p-6 bg-gradient-to-b from-stone-900 via-stone-950 to-black text-ivory text-center">
+        <div
+          className={cn(
+            "absolute inset-0 flex flex-col justify-between p-6 bg-gradient-to-b from-stone-900 via-stone-950 to-black text-ivory text-center",
+            isVideoVisible ? "opacity-0 pointer-events-none" : "opacity-100"
+          )}
+        >
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_35%,rgba(201,169,106,0.18),transparent_70%)] pointer-events-none" />
 
           {/* Top Branding */}
@@ -149,23 +161,23 @@ export function ReelCard({ reel, isCenter, onOpenViewer, onShopLook }: ReelCardP
         </div>
       )}
 
-      {/* 2. Video Player: Rendered and actively played when centered */}
+      {/* 2. Requirement #5: Autoplay-Safe HTML5 Video */}
       {hasVideo && isCenter && (
         <video
           ref={videoRef}
           src={reel.videoUrl}
           poster={reel.posterUrl}
           playsInline
-          loop
           autoPlay
           muted={isMuted}
-          onLoadedData={() => setVideoLoaded(true)}
-          onCanPlay={() => setVideoLoaded(true)}
+          loop
           onPlay={() => setIsPlaying(true)}
           onPause={() => setIsPlaying(false)}
+          onLoadedData={() => setVideoReady(true)}
+          onCanPlay={() => setVideoReady(true)}
           className={cn(
             "absolute inset-0 h-full w-full object-cover transition-opacity duration-300",
-            videoLoaded && isPlaying ? "opacity-100" : "opacity-0"
+            isVideoVisible ? "opacity-100" : "opacity-0 pointer-events-none"
           )}
         />
       )}
@@ -179,7 +191,7 @@ export function ReelCard({ reel, isCenter, onOpenViewer, onShopLook }: ReelCardP
         </span>
 
         <div className="flex items-center gap-1.5">
-          {/* Sound Toggle (Only visible if video is active) */}
+          {/* Sound Toggle (Only visible when video is actively loaded) */}
           {hasVideo && isCenter && (
             <button
               onClick={toggleMute}
@@ -197,7 +209,7 @@ export function ReelCard({ reel, isCenter, onOpenViewer, onShopLook }: ReelCardP
               target="_blank"
               rel="noopener noreferrer"
               onClick={(e) => e.stopPropagation()}
-              className="flex h-7 w-7 items-center justify-center rounded-full bg-black/60 backdrop-blur-md text-pink-400 hover:text-pink-300 transition border border-pink-500/30 shadow-xs"
+              className="flex h-7 w-7 items-center justify-center rounded-full bg-black/60 backdrop-blur-md text-pink-400 hover:text-pink-300 transition border border-pink-500/30 shadow-xs cursor-pointer"
               aria-label="View on Instagram"
               title="Open Instagram Reel"
             >

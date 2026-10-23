@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import Image from "next/image";
 import type { Reel } from "@/lib/types";
-import { Play, Volume2, VolumeX, ShoppingBag, Instagram, Sparkles } from "lucide-react";
+import { Play, Volume2, VolumeX, ShoppingBag, Instagram, Sparkles, Film, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface ReelCardProps {
@@ -18,10 +19,13 @@ export function ReelCard({ reel, isCenter, onOpenViewer, onShopLook }: ReelCardP
   const [videoLoaded, setVideoLoaded] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  // Play video ONLY when this card is the emphasized center card
+  const isHosted = reel.mediaType === "hosted" && Boolean(reel.videoUrl);
+  const hasCover = Boolean(reel.posterUrl && reel.posterUrl.trim().length > 0);
+
+  // Play video ONLY when this card is hosted, has videoUrl, and is centered
   useEffect(() => {
     const video = videoRef.current;
-    if (!video) return;
+    if (!video || !isHosted) return;
 
     if (isCenter) {
       video.muted = isMuted;
@@ -30,7 +34,6 @@ export function ReelCard({ reel, isCenter, onOpenViewer, onShopLook }: ReelCardP
         playPromise
           .then(() => setIsPlaying(true))
           .catch(() => {
-            // Autoplay blocked by browser policy without user gesture
             setIsPlaying(false);
           });
       }
@@ -38,7 +41,7 @@ export function ReelCard({ reel, isCenter, onOpenViewer, onShopLook }: ReelCardP
       video.pause();
       setIsPlaying(false);
     }
-  }, [isCenter, isMuted]);
+  }, [isCenter, isMuted, isHosted]);
 
   const toggleMute = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -54,25 +57,65 @@ export function ReelCard({ reel, isCenter, onOpenViewer, onShopLook }: ReelCardP
     <div
       onClick={() => onOpenViewer(reel)}
       className={cn(
-        "group relative aspect-[9/16] w-full max-w-[280px] sm:max-w-[300px] cursor-pointer overflow-hidden rounded-2xl border bg-black shadow-lg transition-all duration-500 select-none",
+        "group relative aspect-[9/16] w-full max-w-[280px] sm:max-w-[300px] cursor-pointer overflow-hidden rounded-2xl border bg-stone-950 shadow-lg transition-all duration-500 select-none",
         isCenter
           ? "border-champagne/80 ring-2 ring-champagne/40 scale-100 sm:scale-105 z-10 shadow-2xl"
-          : "border-border/60 opacity-80 sm:opacity-60 scale-95 hover:opacity-90 hover:scale-100 hover:border-champagne/40"
+          : "border-border/60 opacity-80 sm:opacity-60 scale-95 hover:opacity-95 hover:scale-100 hover:border-champagne/40"
       )}
     >
-      {/* 1. Poster Image (Always rendered first for instant zero-lag loading) */}
-      <img
-        src={reel.posterUrl}
-        alt={reel.title}
-        loading="lazy"
-        className={cn(
-          "absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-105",
-          isCenter && videoLoaded ? "opacity-0 pointer-events-none" : "opacity-100"
-        )}
-      />
+      {/* 1. Cover Image OR Elegant VRUNDORA Fallback Card */}
+      {hasCover ? (
+        <img
+          src={reel.posterUrl}
+          alt={reel.title}
+          loading="lazy"
+          className={cn(
+            "absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-105",
+            isHosted && isCenter && videoLoaded ? "opacity-0 pointer-events-none" : "opacity-100"
+          )}
+        />
+      ) : (
+        /* Elegant VRUNDORA Fallback Card (Priority 3: Never leave broken image) */
+        <div className="absolute inset-0 flex flex-col justify-between p-6 bg-gradient-to-b from-stone-900 via-stone-950 to-black text-ivory text-center">
+          {/* Subtle gold decorative glow */}
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_35%,rgba(201,169,106,0.18),transparent_70%)] pointer-events-none" />
 
-      {/* 2. Video Player: Rendered ONLY when this reel is active/centered to prevent unnecessary bandwidth consumption */}
-      {isCenter && (
+          {/* Top Branding */}
+          <div className="relative z-10 pt-4 flex flex-col items-center">
+            <div className="w-10 h-10 rounded-full bg-champagne/15 border border-champagne/30 flex items-center justify-center mb-2 shadow-inner">
+              <Sparkles className="w-5 h-5 text-champagne" />
+            </div>
+            <p className="text-[10px] uppercase tracking-[0.25em] text-champagne font-bold">
+              VRUNDORA
+            </p>
+            <p className="text-[9px] uppercase tracking-wider text-ivory/60 mt-0.5">
+              @VRUNDORA.JEWELLERY
+            </p>
+          </div>
+
+          {/* Center Title & Tagline */}
+          <div className="relative z-10 px-2 my-auto">
+            <span className="inline-block px-2.5 py-0.5 rounded-full text-[9px] uppercase tracking-wider bg-champagne/20 text-champagne border border-champagne/30 mb-2 font-semibold">
+              {reel.category || "Stories In Every Sparkle"}
+            </span>
+            <h4 className="font-serif text-lg sm:text-xl font-bold text-ivory leading-tight drop-shadow-md">
+              {reel.title}
+            </h4>
+            <p className="text-[10px] text-ivory/70 mt-1 italic font-light">
+              Stories In Every Sparkle
+            </p>
+          </div>
+
+          {/* Bottom Instagram Badge */}
+          <div className="relative z-10 pb-1 flex items-center justify-center gap-1.5 text-[11px] text-champagne/90 font-medium">
+            <Instagram className="w-4 h-4 text-pink-500" />
+            <span>Instagram Reel</span>
+          </div>
+        </div>
+      )}
+
+      {/* 2. Video Player: ONLY rendered when hosted, valid videoUrl, and centered */}
+      {isHosted && isCenter && (
         <video
           ref={videoRef}
           src={reel.videoUrl}
@@ -88,8 +131,8 @@ export function ReelCard({ reel, isCenter, onOpenViewer, onShopLook }: ReelCardP
         />
       )}
 
-      {/* Top badges & controls */}
-      <div className="absolute inset-x-0 top-0 p-3 flex items-center justify-between z-20 bg-gradient-to-b from-black/70 via-black/30 to-transparent">
+      {/* Top Badges Bar */}
+      <div className="absolute inset-x-0 top-0 p-3 flex items-center justify-between z-20 bg-gradient-to-b from-black/80 via-black/30 to-transparent">
         {/* Category Pill */}
         <span className="inline-flex items-center gap-1 rounded-full bg-black/60 backdrop-blur-md px-2.5 py-1 text-[10px] font-semibold tracking-wider uppercase text-ivory border border-white/20">
           <Sparkles className="h-3 w-3 text-champagne shrink-0" />
@@ -97,8 +140,8 @@ export function ReelCard({ reel, isCenter, onOpenViewer, onShopLook }: ReelCardP
         </span>
 
         <div className="flex items-center gap-1.5">
-          {/* Sound Toggle (Only visible if video is active) */}
-          {isCenter && videoLoaded && (
+          {/* Sound Toggle (Only visible if hosted video is actively loaded) */}
+          {isHosted && isCenter && videoLoaded && (
             <button
               onClick={toggleMute}
               className="flex h-7 w-7 items-center justify-center rounded-full bg-black/60 backdrop-blur-md text-ivory/90 hover:text-champagne transition border border-white/20"
@@ -108,14 +151,14 @@ export function ReelCard({ reel, isCenter, onOpenViewer, onShopLook }: ReelCardP
             </button>
           )}
 
-          {/* Instagram link badge if present */}
+          {/* Instagram badge */}
           {reel.instagramUrl && (
             <a
               href={reel.instagramUrl}
               target="_blank"
               rel="noopener noreferrer"
               onClick={(e) => e.stopPropagation()}
-              className="flex h-7 w-7 items-center justify-center rounded-full bg-black/60 backdrop-blur-md text-ivory/90 hover:text-champagne transition border border-white/20"
+              className="flex h-7 w-7 items-center justify-center rounded-full bg-black/60 backdrop-blur-md text-pink-400 hover:text-pink-300 transition border border-pink-500/30 shadow-xs"
               aria-label="View on Instagram"
               title="Open Instagram Reel"
             >
@@ -125,17 +168,21 @@ export function ReelCard({ reel, isCenter, onOpenViewer, onShopLook }: ReelCardP
         </div>
       </div>
 
-      {/* Center Play Indicator on inactive or hovered cards */}
-      {(!isCenter || !isPlaying) && (
+      {/* Center Play Indicator on hover / when not playing */}
+      {(!isHosted || !isCenter || !isPlaying) && (
         <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
           <div className="flex h-12 w-12 items-center justify-center rounded-full bg-charcoal/80 text-champagne backdrop-blur-md border border-champagne/40 transition-transform duration-300 group-hover:scale-110 shadow-lg">
-            <Play className="h-5 w-5 fill-champagne ml-0.5" />
+            {reel.mediaType === "instagram" ? (
+              <Instagram className="h-5 w-5 text-pink-400" />
+            ) : (
+              <Play className="h-5 w-5 fill-champagne ml-0.5" />
+            )}
           </div>
         </div>
       )}
 
       {/* Bottom Content Gradient Overlay */}
-      <div className="absolute inset-x-0 bottom-0 p-3.5 sm:p-4 z-20 bg-gradient-to-t from-black/95 via-black/70 to-transparent flex flex-col justify-end text-ivory">
+      <div className="absolute inset-x-0 bottom-0 p-3.5 sm:p-4 z-20 bg-gradient-to-t from-black/95 via-black/75 to-transparent flex flex-col justify-end text-ivory">
         <h3 className="font-serif text-sm sm:text-base font-bold tracking-tight text-ivory line-clamp-1 drop-shadow-sm">
           {reel.title}
         </h3>
@@ -164,11 +211,13 @@ export function ReelCard({ reel, isCenter, onOpenViewer, onShopLook }: ReelCardP
             </span>
           )}
 
-          <span className="text-[10px] text-ivory/60 uppercase tracking-widest font-medium">
-            Watch Full ↗
+          <span className="text-[10px] text-ivory/70 uppercase tracking-wider font-medium flex items-center gap-1 group-hover:text-champagne transition-colors">
+            {reel.mediaType === "instagram" ? "View Reel ↗" : "Watch ↗"}
           </span>
         </div>
       </div>
     </div>
   );
 }
+
+export default ReelCard;

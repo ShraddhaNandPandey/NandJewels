@@ -2,7 +2,21 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import Image from "next/image";
-import { X, Play, Pause, Volume2, VolumeX, ExternalLink, Sparkles, Tag, ShoppingBag, Edit2, Trash2 } from "lucide-react";
+import {
+  X,
+  Play,
+  Pause,
+  Volume2,
+  VolumeX,
+  ExternalLink,
+  Sparkles,
+  Tag,
+  ShoppingBag,
+  Edit2,
+  Trash2,
+  Instagram,
+  Video,
+} from "lucide-react";
 import { Reel } from "@/lib/types";
 import { useStore } from "@/store/useStore";
 
@@ -14,12 +28,21 @@ interface ReelPreviewModalProps {
   onDelete?: (reel: Reel) => void;
 }
 
-export default function ReelPreviewModal({ reel, isOpen, onClose, onEdit, onDelete }: ReelPreviewModalProps) {
+export default function ReelPreviewModal({
+  reel,
+  isOpen,
+  onClose,
+  onEdit,
+  onDelete,
+}: ReelPreviewModalProps) {
   const products = useStore((s) => s.products);
   const [isPlaying, setIsPlaying] = useState(true);
   const [isMuted, setIsMuted] = useState(false);
   const [videoError, setVideoError] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
+
+  const isHosted = reel?.mediaType === "hosted" && Boolean(reel?.videoUrl);
+  const hasCover = Boolean(reel?.posterUrl && reel.posterUrl.trim().length > 0);
 
   useEffect(() => {
     if (!isOpen) {
@@ -42,7 +65,7 @@ export default function ReelPreviewModal({ reel, isOpen, onClose, onEdit, onDele
     .filter(Boolean);
 
   const togglePlay = () => {
-    if (!videoRef.current) return;
+    if (!videoRef.current || !isHosted) return;
     if (isPlaying) {
       videoRef.current.pause();
       setIsPlaying(false);
@@ -53,7 +76,7 @@ export default function ReelPreviewModal({ reel, isOpen, onClose, onEdit, onDele
   };
 
   const toggleMute = () => {
-    if (!videoRef.current) return;
+    if (!videoRef.current || !isHosted) return;
     videoRef.current.muted = !isMuted;
     setIsMuted(!isMuted);
   };
@@ -72,100 +95,135 @@ export default function ReelPreviewModal({ reel, isOpen, onClose, onEdit, onDele
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 z-20 w-9 h-9 rounded-full bg-stone-800/80 text-stone-200 hover:text-white hover:bg-stone-700 flex items-center justify-center transition-all"
+          className="absolute top-4 right-4 z-20 w-9 h-9 rounded-full bg-stone-800/80 text-stone-200 hover:text-white hover:bg-stone-700 flex items-center justify-center transition-all cursor-pointer"
           title="Close Preview"
         >
           <X className="w-5 h-5" />
         </button>
 
-        {/* Video / Player Side */}
+        {/* Video / Visual Preview Side */}
         <div className="relative w-full md:w-[420px] aspect-[9/16] bg-black flex-shrink-0 flex items-center justify-center overflow-hidden">
-          {reel.videoUrl && !videoError ? (
-            <video
-              ref={videoRef}
-              src={reel.videoUrl}
-              poster={reel.posterUrl}
-              autoPlay
-              playsInline
-              loop
-              muted={isMuted}
-              className="w-full h-full object-cover"
-              onError={() => setVideoError(true)}
-              onPlay={() => setIsPlaying(true)}
-              onPause={() => setIsPlaying(false)}
-            />
-          ) : (
+          {isHosted && !videoError ? (
+            /* Hosted MP4 Video */
+            <>
+              <video
+                ref={videoRef}
+                src={reel.videoUrl}
+                poster={reel.posterUrl}
+                autoPlay
+                playsInline
+                loop
+                muted={isMuted}
+                className="w-full h-full object-cover"
+                onError={() => setVideoError(true)}
+                onPlay={() => setIsPlaying(true)}
+                onPause={() => setIsPlaying(false)}
+              />
+
+              {/* Play/Pause & Mute Buttons */}
+              <div className="absolute bottom-4 right-4 z-10 flex items-center gap-2">
+                <button
+                  onClick={toggleMute}
+                  className="w-9 h-9 rounded-full bg-black/60 backdrop-blur-md text-white border border-white/20 flex items-center justify-center hover:bg-black/80 transition-all cursor-pointer"
+                  title={isMuted ? "Unmute" : "Mute"}
+                >
+                  {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+                </button>
+                <button
+                  onClick={togglePlay}
+                  className="w-9 h-9 rounded-full bg-black/60 backdrop-blur-md text-white border border-white/20 flex items-center justify-center hover:bg-black/80 transition-all cursor-pointer"
+                  title={isPlaying ? "Pause" : "Play"}
+                >
+                  {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 fill-white ml-0.5" />}
+                </button>
+              </div>
+            </>
+          ) : hasCover ? (
+            /* Custom Cover Image (Instagram or fallback) */
             <div className="relative w-full h-full">
-              {reel.posterUrl ? (
-                <Image
-                  src={reel.posterUrl}
-                  alt={reel.title}
-                  fill
-                  sizes="420px"
-                  className="object-cover"
-                />
-              ) : (
-                <div className="w-full h-full flex flex-col items-center justify-center text-stone-500 p-6 text-center">
-                  <Play className="w-12 h-12 stroke-[1.2] mb-2" />
-                  <p className="text-xs">No valid video or poster available</p>
+              <Image
+                src={reel.posterUrl!}
+                alt={reel.title}
+                fill
+                sizes="420px"
+                className="object-cover"
+              />
+              <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
+                <div className="w-14 h-14 rounded-full bg-black/60 backdrop-blur-md border border-white/20 flex items-center justify-center text-pink-400">
+                  <Instagram className="w-6 h-6" />
                 </div>
-              )}
-              {videoError && (
-                <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center p-4 text-center">
-                  <span className="px-2.5 py-1 bg-amber-500/20 text-amber-300 text-xs rounded-full border border-amber-500/30 mb-2">
-                    Video Load Fallback
-                  </span>
-                  <p className="text-xs text-stone-300">
-                    Showing poster image (video could not be loaded)
-                  </p>
+              </div>
+            </div>
+          ) : (
+            /* Elegant VRUNDORA Fallback Preview */
+            <div className="relative w-full h-full flex flex-col justify-between p-6 bg-gradient-to-b from-stone-900 via-stone-950 to-black text-white text-center">
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_35%,rgba(201,169,106,0.2),transparent_70%)] pointer-events-none" />
+
+              <div className="relative z-10 pt-4 flex flex-col items-center">
+                <div className="w-12 h-12 rounded-full bg-amber-500/20 border border-amber-400/30 flex items-center justify-center mb-2 shadow-inner">
+                  <Sparkles className="w-6 h-6 text-amber-300" />
                 </div>
-              )}
+                <p className="text-[11px] uppercase tracking-[0.25em] text-amber-300 font-bold">
+                  VRUNDORA
+                </p>
+                <p className="text-[10px] uppercase tracking-wider text-stone-400 mt-0.5">
+                  @VRUNDORA.JEWELLERY
+                </p>
+              </div>
+
+              <div className="relative z-10 px-2 my-auto">
+                <span className="inline-block px-2.5 py-0.5 rounded-full text-[10px] uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-400/30 mb-2 font-medium">
+                  {reel.category || "Stories In Every Sparkle"}
+                </span>
+                <h3 className="font-serif text-xl font-bold text-white leading-tight">
+                  {reel.title}
+                </h3>
+                <p className="text-xs text-stone-300 mt-1.5 italic font-light">
+                  Stories In Every Sparkle
+                </p>
+              </div>
+
+              <div className="relative z-10 pb-2 flex items-center justify-center gap-1.5 text-xs text-pink-400 font-medium">
+                <Instagram className="w-4 h-4" />
+                <span>Instagram Reel</span>
+              </div>
             </div>
           )}
 
-          {/* Controls Overlay */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/40 pointer-events-none" />
-
           {/* Top category badge */}
           <div className="absolute top-4 left-4 z-10">
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium tracking-wider uppercase bg-black/60 backdrop-blur-md text-amber-200 border border-amber-400/30">
-              <Sparkles className="w-3 h-3 text-amber-400" />
-              {reel.category || "Featured"}
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium tracking-wider uppercase bg-black/60 backdrop-blur-md text-amber-200 border border-amber-400/30">
+              {reel.mediaType === "instagram" ? (
+                <Instagram className="w-3.5 h-3.5 text-pink-400" />
+              ) : (
+                <Video className="w-3.5 h-3.5 text-amber-400" />
+              )}
+              <span>{reel.category || "VRUNDORA"}</span>
             </span>
-          </div>
-
-          {/* Play/Pause & Mute Buttons */}
-          <div className="absolute bottom-4 right-4 z-10 flex items-center gap-2">
-            <button
-              onClick={toggleMute}
-              className="w-9 h-9 rounded-full bg-black/60 backdrop-blur-md text-white border border-white/20 flex items-center justify-center hover:bg-black/80 transition-all"
-              title={isMuted ? "Unmute" : "Mute"}
-            >
-              {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-            </button>
-            <button
-              onClick={togglePlay}
-              className="w-9 h-9 rounded-full bg-black/60 backdrop-blur-md text-white border border-white/20 flex items-center justify-center hover:bg-black/80 transition-all"
-              title={isPlaying ? "Pause" : "Play"}
-            >
-              {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 fill-white ml-0.5" />}
-            </button>
           </div>
         </div>
 
         {/* Info & Products Side */}
         <div className="flex-1 p-6 md:p-8 flex flex-col overflow-y-auto">
           <div className="mb-4">
-            <div className="flex items-center gap-2 mb-1">
-              <span className={`px-2 py-0.5 text-[10px] uppercase font-semibold tracking-wider rounded-full ${
-                reel.isActive
-                  ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
-                  : "bg-stone-700 text-stone-400"
-              }`}>
+            <div className="flex flex-wrap items-center gap-2 mb-2">
+              <span
+                className={`px-2.5 py-0.5 text-[10px] uppercase font-semibold tracking-wider rounded-full ${
+                  reel.isActive
+                    ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
+                    : "bg-stone-700 text-stone-400"
+                }`}
+              >
                 {reel.isActive ? "● Active on Store" : "○ Inactive / Hidden"}
               </span>
+
+              <span className="px-2 py-0.5 text-[10px] uppercase font-semibold tracking-wider rounded-full bg-stone-800 text-stone-300 border border-stone-700">
+                {reel.mediaType === "instagram" ? "Instagram Reel" : "Hosted Video"}
+              </span>
+
               <span className="text-xs text-stone-500">Order #{reel.order}</span>
             </div>
+
             <h2 className="text-2xl font-serif text-white mb-2">{reel.title}</h2>
             {reel.caption && (
               <p className="text-sm text-stone-300 leading-relaxed font-light whitespace-pre-line">
@@ -174,16 +232,18 @@ export default function ReelPreviewModal({ reel, isOpen, onClose, onEdit, onDele
             )}
           </div>
 
+          {/* Instagram Link CTA */}
           {reel.instagramUrl && (
             <div className="mb-6">
               <a
                 href={reel.instagramUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 text-xs text-amber-300 hover:text-amber-200 hover:underline"
+                className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-gradient-to-r from-pink-600/20 to-purple-600/20 border border-pink-500/30 text-pink-300 hover:text-white hover:bg-pink-600/30 text-xs font-medium transition-all"
               >
+                <Instagram className="w-4 h-4 text-pink-400" />
+                <span>View on Instagram</span>
                 <ExternalLink className="w-3.5 h-3.5" />
-                <span>View original post on Instagram</span>
               </a>
             </div>
           )}
@@ -202,7 +262,7 @@ export default function ReelPreviewModal({ reel, isOpen, onClose, onEdit, onDele
                 No products linked to this reel yet. Edit the reel to link jewelry pieces.
               </div>
             ) : (
-              <div className="space-y-2.5 max-h-[220px] overflow-y-auto pr-1">
+              <div className="space-y-2.5 max-h-[180px] overflow-y-auto pr-1">
                 {linkedProducts.map((product) => {
                   if (!product) return null;
                   return (
@@ -246,7 +306,7 @@ export default function ReelPreviewModal({ reel, isOpen, onClose, onEdit, onDele
                     onClose();
                     onEdit(reel);
                   }}
-                  className="flex-1 py-2.5 px-4 rounded-xl bg-amber-500 hover:bg-amber-600 text-stone-950 font-semibold text-xs flex items-center justify-center gap-2 transition-all shadow-sm"
+                  className="flex-1 py-2.5 px-4 rounded-xl bg-amber-500 hover:bg-amber-600 text-stone-950 font-semibold text-xs flex items-center justify-center gap-2 transition-all shadow-sm cursor-pointer"
                 >
                   <Edit2 className="w-4 h-4" />
                   <span>Edit Reel Details</span>
@@ -259,7 +319,7 @@ export default function ReelPreviewModal({ reel, isOpen, onClose, onEdit, onDele
                     onClose();
                     onDelete(reel);
                   }}
-                  className="py-2.5 px-4 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/30 font-semibold text-xs flex items-center justify-center gap-1.5 transition-all"
+                  className="py-2.5 px-4 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/30 font-semibold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer"
                 >
                   <Trash2 className="w-4 h-4" />
                   <span>Delete Reel</span>

@@ -15,6 +15,7 @@ import {
   ArrowRight,
   ChevronDown,
   ChevronUp,
+  ExternalLink,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -31,6 +32,9 @@ export function ReelViewer({
   onClose,
   onNavigateProduct,
 }: ReelViewerProps) {
+  const isHosted = reel.mediaType === "hosted" && Boolean(reel.videoUrl);
+  const hasCover = Boolean(reel.posterUrl && reel.posterUrl.trim().length > 0);
+
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(true);
   const [isMuted, setIsMuted] = useState(false);
@@ -43,10 +47,10 @@ export function ReelViewer({
     .map((id) => allProducts.find((p) => p.id === id || p.slug === id))
     .filter((p): p is Product => Boolean(p));
 
-  // Auto-play on mount and handle keyboard escape
+  // Auto-play on mount for hosted videos & handle keyboard escape
   useEffect(() => {
     const video = videoRef.current;
-    if (video) {
+    if (video && isHosted) {
       video.muted = isMuted;
       video.play().catch(() => setIsPlaying(false));
     }
@@ -68,11 +72,11 @@ export function ReelViewer({
         video.load();
       }
     };
-  }, [onClose, isMuted]);
+  }, [onClose, isMuted, isHosted]);
 
   const togglePlay = () => {
     const video = videoRef.current;
-    if (!video) return;
+    if (!video || !isHosted) return;
     if (video.paused) {
       video.play();
       setIsPlaying(true);
@@ -85,7 +89,7 @@ export function ReelViewer({
   const toggleMute = (e: React.MouseEvent) => {
     e.stopPropagation();
     const video = videoRef.current;
-    if (video) {
+    if (video && isHosted) {
       video.muted = !isMuted;
       setIsMuted(!isMuted);
     }
@@ -119,20 +123,117 @@ export function ReelViewer({
         onClick={(e) => e.stopPropagation()}
         className="relative z-10 flex flex-col lg:flex-row h-full max-h-[92vh] w-full max-w-5xl overflow-hidden rounded-2xl sm:rounded-3xl border border-white/10 bg-charcoal shadow-2xl"
       >
-        {/* Left Side: 9:16 Video Stage */}
+        {/* Left Side: 9:16 Video / Cover Stage */}
         <div className="relative flex-1 bg-black flex items-center justify-center overflow-hidden min-h-[50vh] lg:min-h-0">
-          <video
-            ref={videoRef}
-            src={reel.videoUrl}
-            poster={reel.posterUrl}
-            playsInline
-            loop
-            onClick={togglePlay}
-            onTimeUpdate={handleTimeUpdate}
-            className="h-full w-full object-contain cursor-pointer"
-          />
+          {isHosted ? (
+            /* Hosted MP4 Video Playback */
+            <>
+              <video
+                ref={videoRef}
+                src={reel.videoUrl}
+                poster={reel.posterUrl}
+                playsInline
+                loop
+                onClick={togglePlay}
+                onTimeUpdate={handleTimeUpdate}
+                className="h-full w-full object-contain cursor-pointer"
+              />
 
-          {/* Top Info Bar inside video */}
+              {/* Play/Pause Overlay indicator when paused */}
+              {!isPlaying && (
+                <div
+                  onClick={togglePlay}
+                  className="absolute inset-0 flex items-center justify-center z-20 cursor-pointer bg-black/30"
+                >
+                  <div className="flex h-16 w-16 items-center justify-center rounded-full bg-charcoal/80 text-champagne border border-champagne/40 shadow-2xl backdrop-blur-sm">
+                    <Play className="h-8 w-8 fill-champagne ml-1" />
+                  </div>
+                </div>
+              )}
+
+              {/* Bottom Video Progress Bar */}
+              <div className="absolute inset-x-0 bottom-0 h-1 bg-white/20 z-30">
+                <div
+                  className="h-full bg-champagne transition-all duration-100"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+            </>
+          ) : (
+            /* Instagram Reel Stage: Cover image OR VRUNDORA Fallback Card */
+            <div className="relative w-full h-full flex items-center justify-center bg-stone-950">
+              {hasCover ? (
+                <img
+                  src={reel.posterUrl}
+                  alt={reel.title}
+                  className="h-full w-full object-contain"
+                />
+              ) : (
+                <div className="relative w-full h-full max-w-sm flex flex-col justify-between p-8 bg-gradient-to-b from-stone-900 via-stone-950 to-black text-ivory text-center rounded-2xl">
+                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_35%,rgba(201,169,106,0.22),transparent_70%)] pointer-events-none" />
+
+                  <div className="relative z-10 pt-8 flex flex-col items-center">
+                    <div className="w-14 h-14 rounded-full bg-champagne/20 border border-champagne/40 flex items-center justify-center mb-3 shadow-lg">
+                      <Sparkles className="w-7 h-7 text-champagne" />
+                    </div>
+                    <p className="text-xs uppercase tracking-[0.3em] text-champagne font-bold">
+                      VRUNDORA
+                    </p>
+                    <p className="text-[11px] uppercase tracking-wider text-ivory/60 mt-1">
+                      @VRUNDORA.JEWELLERY
+                    </p>
+                  </div>
+
+                  <div className="relative z-10 px-4 my-auto">
+                    <span className="inline-block px-3 py-1 rounded-full text-[10px] uppercase tracking-wider bg-champagne/20 text-champagne border border-champagne/40 mb-3 font-semibold">
+                      {reel.category || "Stories In Every Sparkle"}
+                    </span>
+                    <h3 className="font-serif text-2xl font-bold text-ivory leading-tight drop-shadow-md">
+                      {reel.title}
+                    </h3>
+                    {reel.caption && (
+                      <p className="text-xs text-ivory/80 mt-2 font-light line-clamp-3 leading-relaxed">
+                        {reel.caption}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="relative z-10 pb-4">
+                    {reel.instagramUrl && (
+                      <a
+                        href={reel.instagramUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center justify-center gap-2 w-full py-3 px-5 rounded-full bg-gradient-to-r from-pink-600 to-purple-600 text-white text-xs font-semibold hover:brightness-110 transition shadow-lg"
+                      >
+                        <Instagram className="w-4 h-4" />
+                        <span>Watch on Instagram</span>
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      </a>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Instagram Floating CTA if cover exists */}
+              {hasCover && reel.instagramUrl && (
+                <div className="absolute bottom-16 inset-x-6 z-30 flex justify-center">
+                  <a
+                    href={reel.instagramUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-pink-600 via-rose-600 to-amber-600 text-white px-5 py-2.5 text-xs font-bold shadow-2xl hover:scale-105 transition-all"
+                  >
+                    <Instagram className="w-4 h-4" />
+                    <span>Watch Full Reel on Instagram</span>
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </a>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Top Info Bar inside viewer */}
           <div className="absolute inset-x-0 top-0 p-4 flex items-center justify-between z-30 bg-gradient-to-b from-black/80 via-black/40 to-transparent">
             <span className="inline-flex items-center gap-1.5 rounded-full bg-black/60 backdrop-blur-md px-3 py-1 text-xs font-semibold uppercase tracking-wider text-ivory border border-white/20">
               <Sparkles className="h-3.5 w-3.5 text-champagne shrink-0" />
@@ -140,46 +241,28 @@ export function ReelViewer({
             </span>
 
             <div className="flex items-center gap-2">
-              <button
-                onClick={toggleMute}
-                className="flex h-9 w-9 items-center justify-center rounded-full bg-black/60 backdrop-blur-md text-ivory hover:text-champagne border border-white/20 transition"
-                aria-label={isMuted ? "Unmute" : "Mute"}
-              >
-                {isMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
-              </button>
+              {isHosted && (
+                <button
+                  onClick={toggleMute}
+                  className="flex h-9 w-9 items-center justify-center rounded-full bg-black/60 backdrop-blur-md text-ivory hover:text-champagne border border-white/20 transition"
+                  aria-label={isMuted ? "Unmute" : "Mute"}
+                >
+                  {isMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+                </button>
+              )}
 
               {reel.instagramUrl && (
                 <a
                   href={reel.instagramUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex h-9 w-9 items-center justify-center rounded-full bg-black/60 backdrop-blur-md text-ivory hover:text-champagne border border-white/20 transition"
+                  className="flex h-9 w-9 items-center justify-center rounded-full bg-black/60 backdrop-blur-md text-pink-400 hover:text-pink-300 border border-pink-500/30 transition shadow-xs"
                   title="View original on Instagram"
                 >
                   <Instagram className="h-4 w-4" />
                 </a>
               )}
             </div>
-          </div>
-
-          {/* Play/Pause Overlay indicator when paused */}
-          {!isPlaying && (
-            <div
-              onClick={togglePlay}
-              className="absolute inset-0 flex items-center justify-center z-20 cursor-pointer bg-black/30"
-            >
-              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-charcoal/80 text-champagne border border-champagne/40 shadow-2xl backdrop-blur-sm">
-                <Play className="h-8 w-8 fill-champagne ml-1" />
-              </div>
-            </div>
-          )}
-
-          {/* Bottom Video Progress Bar */}
-          <div className="absolute inset-x-0 bottom-0 h-1 bg-white/20 z-30">
-            <div
-              className="h-full bg-champagne transition-all duration-100"
-              style={{ width: `${progress}%` }}
-            />
           </div>
 
           {/* Mobile Bottom Bar for Shop This Look toggle */}
@@ -202,7 +285,6 @@ export function ReelViewer({
           className={cn(
             "flex flex-col bg-card border-t lg:border-t-0 lg:border-l border-border transition-all duration-300 z-40 overflow-hidden",
             "lg:w-[380px] lg:h-full",
-            // Mobile bottom sheet styles
             sheetOpen
               ? "max-h-[60vh] p-4 sm:p-5"
               : "hidden lg:flex p-5"
@@ -212,17 +294,17 @@ export function ReelViewer({
           <div className="border-b border-border pb-4">
             <div className="flex items-center justify-between">
               <span className="text-[10px] uppercase tracking-[0.2em] font-semibold text-champagne">
-                VRUNDORA Reel
+                {reel.mediaType === "instagram" ? "Instagram Reel" : "VRUNDORA Reel"}
               </span>
               {reel.instagramUrl && (
                 <a
                   href={reel.instagramUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 text-[11px] font-medium text-foreground/70 hover:text-champagne transition"
+                  className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-pink-600 hover:text-pink-700 transition"
                 >
                   <Instagram className="h-3.5 w-3.5" />
-                  <span>Instagram</span>
+                  <span>Open Instagram ↗</span>
                 </a>
               )}
             </div>
@@ -241,7 +323,7 @@ export function ReelViewer({
             <div className="flex items-center gap-2 pb-1">
               <ShoppingBag className="h-4 w-4 text-champagne" />
               <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Featured Jewellery ({linkedProducts.length})
+                Shop Featured Jewellery ({linkedProducts.length})
               </h3>
             </div>
 
@@ -301,12 +383,24 @@ export function ReelViewer({
           </div>
 
           {/* Bottom Actions */}
-          <div className="border-t border-border pt-3">
+          <div className="border-t border-border pt-3 space-y-2">
+            {reel.instagramUrl && (
+              <a
+                href={reel.instagramUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-pink-600 to-purple-600 text-white py-2.5 text-xs font-bold hover:brightness-105 transition shadow-sm"
+              >
+                <Instagram className="w-4 h-4" />
+                <span>Watch on Instagram</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </a>
+            )}
             <button
               onClick={onClose}
-              className="w-full rounded-md border border-border py-2 text-xs font-semibold hover:bg-accent transition"
+              className="w-full rounded-xl border border-border py-2 text-xs font-semibold hover:bg-accent transition"
             >
-              Continue Browsing
+              Back to Store
             </button>
           </div>
         </div>
@@ -314,3 +408,5 @@ export function ReelViewer({
     </div>
   );
 }
+
+export default ReelViewer;

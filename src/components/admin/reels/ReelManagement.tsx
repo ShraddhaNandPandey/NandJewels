@@ -21,6 +21,7 @@ import {
   Film,
   Sparkles,
   ShoppingBag,
+  Instagram,
 } from "lucide-react";
 import { useStore } from "@/store/useStore";
 import { Reel } from "@/lib/types";
@@ -306,16 +307,42 @@ export default function ReelManagement() {
                               className="object-cover group-hover/thumb:scale-105 transition-transform"
                             />
                           ) : (
-                            <Film className="w-5 h-5 text-stone-500" />
+                            <div className="w-full h-full flex flex-col items-center justify-center p-1 text-center bg-stone-950">
+                              <Sparkles className="w-3.5 h-3.5 text-amber-400 mb-0.5" />
+                              <span className="text-[8px] font-bold tracking-widest text-amber-200 uppercase">VRUNDORA</span>
+                              {reel.mediaType === "instagram" ? (
+                                <Instagram className="w-3 h-3 text-pink-400 mt-1" />
+                              ) : (
+                                <Video className="w-3 h-3 text-amber-400 mt-1" />
+                              )}
+                            </div>
                           )}
-                          <div className="absolute inset-0 bg-black/30 group-hover/thumb:bg-black/50 transition-colors flex items-center justify-center">
-                            <Play className="w-4 h-4 fill-white text-white opacity-80 group-hover/thumb:opacity-100 transition-opacity" />
+                          <div className="absolute inset-0 bg-black/20 group-hover/thumb:bg-black/40 transition-colors flex items-center justify-center">
+                            {reel.mediaType === "instagram" ? (
+                              <Instagram className="w-4 h-4 text-pink-400 opacity-90 group-hover/thumb:scale-110 transition-transform" />
+                            ) : (
+                              <Play className="w-4 h-4 fill-white text-white opacity-90 group-hover/thumb:scale-110 transition-transform" />
+                            )}
                           </div>
                         </div>
                       </td>
 
                       {/* Title & Caption */}
                       <td className="py-3 px-4 max-w-xs">
+                        <div className="flex items-center gap-1.5 mb-0.5">
+                          <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                            reel.mediaType === "instagram"
+                              ? "bg-pink-50 text-pink-700 border border-pink-200"
+                              : "bg-amber-50 text-amber-800 border border-amber-200"
+                          }`}>
+                            {reel.mediaType === "instagram" ? (
+                              <Instagram className="w-2.5 h-2.5 text-pink-600" />
+                            ) : (
+                              <Video className="w-2.5 h-2.5 text-amber-600" />
+                            )}
+                            <span>{reel.mediaType === "instagram" ? "Instagram" : "Hosted Video"}</span>
+                          </span>
+                        </div>
                         <div className="font-serif font-medium text-stone-900 truncate">
                           {reel.title}
                         </div>
@@ -450,21 +477,40 @@ export default function ReelManagement() {
                           className="object-cover"
                         />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center text-stone-500">
-                          <Film className="w-5 h-5" />
+                        <div className="w-full h-full flex flex-col items-center justify-center p-1 text-center bg-stone-950">
+                          <Sparkles className="w-3.5 h-3.5 text-amber-400 mb-0.5" />
+                          <span className="text-[7px] font-bold tracking-widest text-amber-200 uppercase">VRUNDORA</span>
+                          {reel.mediaType === "instagram" ? (
+                            <Instagram className="w-3 h-3 text-pink-400 mt-1" />
+                          ) : (
+                            <Video className="w-3 h-3 text-amber-400 mt-1" />
+                          )}
                         </div>
                       )}
-                      <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
-                        <Play className="w-4 h-4 fill-white text-white opacity-90" />
+                      <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+                        {reel.mediaType === "instagram" ? (
+                          <Instagram className="w-4 h-4 text-pink-400 opacity-90" />
+                        ) : (
+                          <Play className="w-4 h-4 fill-white text-white opacity-90" />
+                        )}
                       </div>
                     </div>
 
                     {/* Details */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-2 mb-1">
-                        <span className="font-mono text-xs font-semibold text-stone-600 bg-stone-100 px-2 py-0.5 rounded">
-                          #{reel.order}
-                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-mono text-xs font-semibold text-stone-600 bg-stone-100 px-2 py-0.5 rounded">
+                            #{reel.order}
+                          </span>
+                          <span className={`px-1.5 py-0.5 rounded text-[9px] font-medium ${
+                            reel.mediaType === "instagram"
+                              ? "bg-pink-50 text-pink-700 border border-pink-200"
+                              : "bg-amber-50 text-amber-800 border border-amber-200"
+                          }`}>
+                            {reel.mediaType === "instagram" ? "Instagram" : "Hosted"}
+                          </span>
+                        </div>
                         <button
                           onClick={() => toggleReelActive(reel.id)}
                           className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-medium ${

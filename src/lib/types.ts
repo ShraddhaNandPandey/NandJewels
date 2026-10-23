@@ -226,14 +226,17 @@ export interface User {
   createdAt: string;
 }
 
+export type ReelMediaType = "instagram" | "hosted";
+
 export interface Reel {
   id: string;
   title: string;
   category: string;
   caption?: string;
-  videoUrl: string;
-  posterUrl: string;
+  mediaType: ReelMediaType;
   instagramUrl?: string;
+  videoUrl?: string;
+  posterUrl?: string;
   productIds: string[];
   order: number;
   isActive: boolean;

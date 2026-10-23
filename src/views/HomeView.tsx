@@ -9,6 +9,7 @@ import { Star, ArrowRight, Truck, ShieldCheck, RotateCcw, Sparkles, Quote } from
 import { Button } from "@/components/ui/button";
 
 import { EditorialHero } from "@/components/home/EditorialHero";
+import { ReelsSection } from "@/components/reels/ReelsSection";
 
 export function HomeView() {
   const navigate = useStore((s) => s.navigate);
@@ -317,75 +318,8 @@ export function HomeView() {
         </div>
       </section>
 
-      {/* Instagram strip with working interactive styling pins */}
-      <section className="mx-auto max-w-7xl px-6 pb-16">
-        <SectionHeader
-          eyebrow="@vrundora.jewellery"
-          title="Styled by you"
-          actionLabel="View on Instagram"
-          onAction={() => window.open("https://instagram.com", "_blank", "noopener,noreferrer")}
-        />
-        <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-          {[
-            {
-              src: "https://images.unsplash.com/photo-1535632787350-4e68ef0ac584?auto=format&fit=crop&w=400&q=80",
-              title: "Aurora Drops",
-              price: "₹1,299",
-              id: "p1",
-            },
-            {
-              src: "https://images.unsplash.com/photo-1599643477877-530eb83abc8e?auto=format&fit=crop&w=400&q=80",
-              title: "Celeste Choker",
-              price: "₹2,199",
-              id: "p5",
-            },
-            {
-              src: "https://images.unsplash.com/photo-1605100804763-247f67b3557e?auto=format&fit=crop&w=400&q=80",
-              title: "Solitaire Band",
-              price: "₹899",
-              id: "p8",
-            },
-            {
-              src: "https://images.unsplash.com/photo-1611652022419-a9419f74343d?auto=format&fit=crop&w=400&q=80",
-              title: "Tennis Bracelet",
-              price: "₹1,499",
-              id: "p21",
-            },
-            {
-              src: "https://images.unsplash.com/photo-1508009745836-4a14be7d4f3f?auto=format&fit=crop&w=400&q=80",
-              title: "Kada Bangle",
-              price: "₹1,799",
-              id: "p12",
-            },
-            {
-              src: "https://images.unsplash.com/photo-1573408301185-9146fe634ad0?auto=format&fit=crop&w=400&q=80",
-              title: "Festive Set",
-              price: "₹3,499",
-              id: "p15",
-            },
-          ].map((item, i) => (
-            <button
-              key={i}
-              onClick={() => navigate("product", { id: item.id })}
-              className="group relative aspect-square overflow-hidden rounded-xl border border-border/60 text-left cursor-pointer transition-all hover:shadow-lg"
-            >
-              <img
-                src={item.src}
-                alt={`Instagram look ${i + 1}`}
-                loading="lazy"
-                className="h-full w-full object-cover transition duration-500 group-hover:scale-110"
-              />
-              <div className="absolute inset-0 bg-charcoal/70 opacity-0 transition-opacity duration-300 group-hover:opacity-100 flex flex-col justify-end p-3 text-ivory">
-                <span className="text-[10px] text-champagne font-medium uppercase tracking-wider">
-                  Shop Look ✦
-                </span>
-                <p className="text-xs font-semibold truncate">{item.title}</p>
-                <p className="text-xs text-champagne font-bold">{item.price}</p>
-              </div>
-            </button>
-          ))}
-        </div>
-      </section>
+      {/* VRUNDORA Instagram Reels experience with Embla carousel & Shop This Look */}
+      <ReelsSection />
     </div>
   );
 }

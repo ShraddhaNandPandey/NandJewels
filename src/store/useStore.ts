@@ -13,6 +13,7 @@ import type {
   OrderStatus,
   PaymentMethod,
   Product,
+  Reel,
   Review,
   SupportTicket,
   User,
@@ -20,6 +21,7 @@ import type {
 } from "@/lib/types";
 import { getProduct, products as allProducts, calculateComboStock, setProductStoreGetter } from "@/data/products";
 import { applyCouponDiscount, coupons as defaultCoupons } from "@/data/coupons";
+import { initialReels } from "@/data/reels";
 
 export interface ToastMsg {
   id: string;
@@ -132,6 +134,16 @@ interface StoreState {
   approveReview: (reviewId: string) => void;
   rejectReview: (reviewId: string) => void;
   replyReview: (reviewId: string, reply: string) => void;
+
+  // instagram reels management
+  reels: Reel[];
+  addReel: (r: Omit<Reel, "id" | "createdAt" | "updatedAt">) => void;
+  updateReel: (id: string, patch: Partial<Reel>) => void;
+  deleteReel: (id: string) => void;
+  duplicateReel: (id: string) => void;
+  toggleReelActive: (id: string) => void;
+  reorderReel: (id: string, direction: "up" | "down") => void;
+  setReelsOrder: (orderedReels: Reel[]) => void;
 
   // store settings
   storeSettings: StoreSettings;
@@ -937,6 +949,90 @@ export const useStore = create<StoreState>()(
         });
       },
 
+      // instagram reels
+      reels: initialReels,
+      addReel: (r) => {
+        const id = uid("reel");
+        const now = new Date().toISOString();
+        const current = get().reels || initialReels;
+        const maxOrder = current.reduce((max, item) => Math.max(max, item.order), 0);
+        const newReel: Reel = {
+          ...r,
+          id,
+          order: r.order || maxOrder + 1,
+          createdAt: now,
+          updatedAt: now,
+        };
+        const updated = [...current, newReel].sort((a, b) => a.order - b.order);
+        set({ reels: updated });
+        get().pushToast({ title: "Reel added", description: `"${newReel.title}" created successfully.`, variant: "success" });
+      },
+      updateReel: (id, patch) => {
+        const current = get().reels || initialReels;
+        const now = new Date().toISOString();
+        const updated = current.map((r) =>
+          r.id === id ? { ...r, ...patch, updatedAt: now } : r
+        ).sort((a, b) => a.order - b.order);
+        set({ reels: updated });
+        get().pushToast({ title: "Reel updated", description: "Changes saved successfully.", variant: "success" });
+      },
+      deleteReel: (id) => {
+        const current = get().reels || initialReels;
+        const target = current.find((r) => r.id === id);
+        const updated = current.filter((r) => r.id !== id);
+        set({ reels: updated });
+        get().pushToast({ title: "Reel deleted", description: target ? `"${target.title}" was removed.` : undefined, variant: "destructive" });
+      },
+      duplicateReel: (id) => {
+        const current = get().reels || initialReels;
+        const source = current.find((r) => r.id === id);
+        if (!source) return;
+        const newId = uid("reel");
+        const now = new Date().toISOString();
+        const maxOrder = current.reduce((max, item) => Math.max(max, item.order), 0);
+        const duplicate: Reel = {
+          ...source,
+          id: newId,
+          title: `${source.title} — Copy`,
+          order: maxOrder + 1,
+          createdAt: now,
+          updatedAt: now,
+        };
+        const updated = [...current, duplicate].sort((a, b) => a.order - b.order);
+        set({ reels: updated });
+        get().pushToast({ title: "Reel duplicated", description: `Created "${duplicate.title}".`, variant: "success" });
+      },
+      toggleReelActive: (id) => {
+        const current = get().reels || initialReels;
+        const updated = current.map((r) =>
+          r.id === id ? { ...r, isActive: !r.isActive, updatedAt: new Date().toISOString() } : r
+        );
+        set({ reels: updated });
+        const target = updated.find((r) => r.id === id);
+        get().pushToast({
+          title: target?.isActive ? "Reel activated" : "Reel deactivated",
+          description: target ? `"${target.title}" is now ${target.isActive ? "visible" : "hidden"} on storefront.` : undefined,
+          variant: "success",
+        });
+      },
+      reorderReel: (id, direction) => {
+        const current = [...(get().reels || initialReels)].sort((a, b) => a.order - b.order);
+        const index = current.findIndex((r) => r.id === id);
+        if (index === -1) return;
+        const targetIndex = direction === "up" ? index - 1 : index + 1;
+        if (targetIndex < 0 || targetIndex >= current.length) return;
+        const temp = current[index];
+        current[index] = current[targetIndex];
+        current[targetIndex] = temp;
+        const normalized = current.map((item, idx) => ({ ...item, order: idx + 1, updatedAt: new Date().toISOString() }));
+        set({ reels: normalized });
+      },
+      setReelsOrder: (orderedReels) => {
+        const normalized = orderedReels.map((item, idx) => ({ ...item, order: idx + 1, updatedAt: new Date().toISOString() }));
+        set({ reels: normalized });
+        get().pushToast({ title: "Order saved", description: "Reels display sequence updated.", variant: "success" });
+      },
+
       // store settings
       storeSettings: {
         storeName: "VRUNDORA (वृन्दोरा) Jewellery",
@@ -1006,6 +1102,7 @@ export const useStore = create<StoreState>()(
         products: s.products,
         coupons: s.coupons,
         reviews: s.reviews,
+        reels: s.reels,
         storeSettings: s.storeSettings,
         adminUsers: s.adminUsers,
       }),

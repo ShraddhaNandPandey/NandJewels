@@ -226,6 +226,21 @@ export interface User {
   createdAt: string;
 }
 
+export interface Reel {
+  id: string;
+  title: string;
+  category: string;
+  caption?: string;
+  videoUrl: string;
+  posterUrl: string;
+  instagramUrl?: string;
+  productIds: string[];
+  order: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 // UI navigation
 export type ViewName =
   | "home"

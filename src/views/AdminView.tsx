@@ -66,8 +66,10 @@ import {
   SlidersHorizontal,
   ArrowRight,
   ShieldAlert,
+  Film,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import ReelManagement from "@/components/admin/reels/ReelManagement";
 import {
   AreaChart,
   Area,
@@ -83,7 +85,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
-type AdminSection = "dashboard" | "products" | "orders" | "customers" | "coupons" | "reviews" | "reports" | "settings";
+type AdminSection = "dashboard" | "products" | "orders" | "customers" | "coupons" | "reviews" | "reels" | "reports" | "settings";
 
 const navItems: { id: AdminSection; label: string; icon: React.ElementType; group: string }[] = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, group: "Overview" },
@@ -92,6 +94,7 @@ const navItems: { id: AdminSection; label: string; icon: React.ElementType; grou
   { id: "customers", label: "Customers", icon: Users, group: "Sales" },
   { id: "coupons", label: "Coupons", icon: Ticket, group: "Marketing" },
   { id: "reviews", label: "Reviews", icon: Star, group: "Marketing" },
+  { id: "reels", label: "Instagram Reels", icon: Film, group: "Marketing" },
   { id: "reports", label: "Reports", icon: BarChart3, group: "Insights" },
   { id: "settings", label: "Settings", icon: Settings, group: "System" },
 ];
@@ -315,6 +318,7 @@ export function AdminView() {
             {section === "customers" && <CustomersSection orders={orders} />}
             {section === "coupons" && <CouponsSection />}
             {section === "reviews" && <ReviewsSection />}
+            {section === "reels" && <ReelManagement />}
             {section === "reports" && <ReportsSection orders={orders} />}
             {section === "settings" && <SettingsSection />}
           </div>
